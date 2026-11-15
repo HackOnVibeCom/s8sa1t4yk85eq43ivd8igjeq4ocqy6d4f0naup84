@@ -5,11 +5,90 @@ import ContributionCard from '@/components/contribution-card';
 import { ClaimCard, DemoNotice, SectionLabel, ShareCard, Shell, StatChip, StatusBadge, TrustLegend, VenuePin } from '@/components/ui';
 import { getEvidence, getVenue } from '@/lib/demo-data';
 import { formatDate, getFreshnessLabel } from '@/lib/utils';
+import { prisma } from '@/lib/prisma';
+import type { Venue, AccessibilityClaim, Contribution, VenueCategory, ClaimValue, ClaimStatus } from '@/lib/types';
+
+async function getVenueData(id: string): Promise<Venue | undefined> {
+  try {
+    const record = await prisma.venue.findUnique({
+      where: { id },
+      include: {
+        claims: true,
+        contributions: {
+          where: { NOT: { moderationStatus: 'rejected' } },
+          orderBy: { submittedAt: 'desc' },
+          include: { contributor: true, reactions: true, reports: true },
+        },
+      },
+    });
+
+    if (record) {
+      const claims: AccessibilityClaim[] = record.claims.map((c) => ({
+        id: c.id,
+        venueId: c.venueId,
+        attributeKey: c.attributeKey,
+        label: c.label,
+        group: c.group as AccessibilityClaim['group'],
+        value: c.value as ClaimValue,
+        note: c.note,
+        status: c.status as ClaimStatus,
+        observedAt: c.observedAt.toISOString().slice(0, 10),
+        submittedAt: c.submittedAt.toISOString(),
+        lastReviewedAt: c.lastReviewedAt?.toISOString(),
+        reviewedBy: c.reviewedBy ?? undefined,
+        evidenceIds: JSON.parse(c.evidenceIds) as string[],
+        corroborationCount: c.corroborationCount,
+        challengeCount: c.challengeCount,
+        ownerProvided: c.ownerProvided,
+      }));
+
+      const contributions: Contribution[] = record.contributions.map((c) => ({
+        id: c.id,
+        venueId: c.venueId,
+        claimId: c.claimId ?? '',
+        attributeLabel: c.attributeLabel,
+        note: c.note,
+        contributor: c.contributor?.name ?? 'Community contributor',
+        contributorType: (c.contributor?.role === 'Venue owner' ? 'Venue owner' : 'Community contributor') as Contribution['contributorType'],
+        submittedAt: c.submittedAt.toISOString(),
+        observedAt: c.observedAt.toISOString().slice(0, 10),
+        status: c.status as ClaimStatus,
+        helpfulCount: c.reactions.filter((r) => r.type === 'Helpful').length,
+        confirmationCount: c.reactions.filter((r) => r.type === 'I observed this too').length,
+        reportCount: c.reports.length,
+        evidenceIds: [],
+        isDemo: record.isDemo,
+      }));
+
+      const lastObserved = claims.reduce((latest, claim) => (claim.observedAt > latest ? claim.observedAt : latest), claims[0]?.observedAt ?? record.createdAt.toISOString().slice(0, 10));
+
+      return {
+        id: record.id,
+        name: record.name,
+        category: record.category as VenueCategory,
+        address: record.address,
+        district: record.district,
+        lat: record.lat,
+        lon: record.lon,
+        source: record.source,
+        isDemo: record.isDemo,
+        lastObserved,
+        description: record.description,
+        tags: JSON.parse(record.tags) as string[],
+        claims,
+        contributions,
+      };
+    }
+  } catch {
+    // Fall back to demo data if database query fails or is not connected
+  }
+  return getVenue(id);
+}
 
 export default async function VenuePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const venue = getVenue(id);
+  const venue = await getVenueData(id);
   if (!venue) notFound();
   const evidence = venue.claims.flatMap((claim) => claim.evidenceIds.map((id) => getEvidence(id)).filter(Boolean));
-  return <Shell><div className="mx-auto max-w-[1440px] px-5 pb-20 pt-8 lg:px-8"><Link href="/discover" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-teal"><ArrowLeft className="h-4 w-4" />Back to discovery</Link><div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]"><div><div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-[#EFF8F6] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-teal">{venue.category}</span><span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">Demo data</span></div><h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-navy sm:text-5xl">{venue.name}</h1><p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-500"><VenuePin venue={venue} />{venue.address}</p><p className="mt-5 max-w-3xl text-base leading-7 text-slate-600">{venue.description}</p><div className="mt-6 flex flex-wrap gap-2">{venue.tags.map((tag) => <span key={tag} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">{tag}</span>)}</div></div><ShareCard venue={venue} /></div><div className="mt-8"><DemoNotice /></div><div className="mt-8 grid gap-4 sm:grid-cols-3"><StatChip icon={<FileSearch className="h-5 w-5" />} value={`${venue.claims.length}`} label="attributes listed" /><StatChip icon={<CalendarDays className="h-5 w-5" />} value={formatDate(venue.lastObserved)} label="latest observation" /><StatChip icon={<MessageCircle className="h-5 w-5" />} value={`${venue.contributions.length}`} label="community notes" /></div><div className="mt-14 grid gap-12 lg:grid-cols-[1fr_330px]"><div><SectionLabel eyebrow="Accessibility information">Inspect each claim separately.</SectionLabel><div className="space-y-4">{venue.claims.map((claim) => <ClaimCard key={claim.id} claim={claim} evidence={claim.evidenceIds[0] ? getEvidence(claim.evidenceIds[0]) : undefined} />)}</div><div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#F5C7B8] bg-[#FFF4EE] p-5"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-coral" /><div><h3 className="font-extrabold text-navy">No overall access score</h3><p className="mt-1 text-sm leading-6 text-slate-600">Access needs vary. Use the individual claims, their evidence and your own needs to decide what to ask the venue.</p></div></div></div><aside className="space-y-5"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-start gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F3FF] text-[#6B45B7]"><Sparkles className="h-5 w-5" /></div><div><h3 className="font-extrabold text-navy">Evidence, not a verdict</h3><p className="mt-1 text-sm leading-6 text-slate-500">AI may help describe a visible feature, but it cannot certify this venue or replace a human review.</p></div></div><Link href="/contribute" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-teal">Add fresh evidence <ArrowUpRight className="h-4 w-4" /></Link></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-amber" /><h3 className="font-extrabold text-navy">Freshness signal</h3></div><p className="mt-3 text-sm leading-6 text-slate-600">The venue was last observed on <strong>{formatDate(venue.lastObserved)}</strong>. {getFreshnessLabel(venue.lastObserved)}. Conditions can change.</p><button className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal"><CircleAlert className="h-4 w-4" />Report outdated information</button></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><Share2 className="h-4 w-4 text-teal" /><h3 className="font-extrabold text-navy">Public profile</h3></div><p className="mt-2 text-sm leading-6 text-slate-500">Share this profile with someone planning the same journey. Registration is never required to inspect it.</p><button className="mt-4 w-full rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white hover:bg-teal">Copy link</button></div></aside></div><div className="mt-16"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><SectionLabel eyebrow="Community evidence">What people observed</SectionLabel><Link href="/contribute" className="inline-flex items-center gap-2 text-sm font-black text-teal">Share a fresh observation <ArrowUpRight className="h-4 w-4" /></Link></div><div className="grid gap-5 lg:grid-cols-2">{venue.contributions.map((contribution) => <ContributionCard key={contribution.id} contribution={contribution} evidence={contribution.evidenceIds[0] ? getEvidence(contribution.evidenceIds[0]) : undefined} />)}{venue.contributions.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">No contributions yet. Be the first to add an observation.</div>}</div></div><div className="mt-16"><SectionLabel eyebrow="Trust states">Read the labels before you decide.</SectionLabel><TrustLegend /></div></div></Shell>;
+  return <Shell><div className="mx-auto max-w-[1440px] px-5 pb-20 pt-8 lg:px-8"><Link href="/discover" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-teal"><ArrowLeft className="h-4 w-4" />Back to discovery</Link><div className="mt-7 grid gap-8 lg:grid-cols-[1fr_360px]"><div><div className="flex flex-wrap items-center gap-3"><span className="rounded-full bg-[#EFF8F6] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-teal">{venue.category}</span><span className="rounded-full bg-teal-50 border border-teal-200 px-3 py-1 text-xs font-bold text-teal-800">Community Verified</span></div><h1 className="mt-4 max-w-4xl text-4xl font-black tracking-tight text-navy sm:text-5xl">{venue.name}</h1><p className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-500"><VenuePin venue={venue} />{venue.address}</p><p className="mt-5 max-w-3xl text-base leading-7 text-slate-600">{venue.description}</p><div className="mt-6 flex flex-wrap gap-2">{venue.tags.map((tag) => <span key={tag} className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">{tag}</span>)}</div></div><ShareCard venue={venue} /></div><div className="mt-8"><DemoNotice /></div><div className="mt-8 grid gap-4 sm:grid-cols-3"><StatChip icon={<FileSearch className="h-5 w-5" />} value={`${venue.claims.length}`} label="attributes listed" /><StatChip icon={<CalendarDays className="h-5 w-5" />} value={formatDate(venue.lastObserved)} label="latest observation" /><StatChip icon={<MessageCircle className="h-5 w-5" />} value={`${venue.contributions.length}`} label="community notes" /></div><div className="mt-14 grid gap-12 lg:grid-cols-[1fr_330px]"><div><SectionLabel eyebrow="Accessibility information">Inspect each claim separately.</SectionLabel><div className="space-y-4">{venue.claims.map((claim) => <ClaimCard key={claim.id} claim={claim} evidence={claim.evidenceIds[0] ? getEvidence(claim.evidenceIds[0]) : undefined} />)}</div><div className="mt-7 flex items-start gap-3 rounded-2xl border border-[#F5C7B8] bg-[#FFF4EE] p-5"><CircleAlert className="mt-0.5 h-5 w-5 shrink-0 text-coral" /><div><h3 className="font-extrabold text-navy">No overall access score</h3><p className="mt-1 text-sm leading-6 text-slate-600">Access needs vary. Use the individual claims, their evidence and your own needs to decide what to ask the venue.</p></div></div></div><aside className="space-y-5"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-start gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#F7F3FF] text-[#6B45B7]"><Sparkles className="h-5 w-5" /></div><div><h3 className="font-extrabold text-navy">Evidence, not a verdict</h3><p className="mt-1 text-sm leading-6 text-slate-500">AI may help describe a visible feature, but it cannot certify this venue or replace a human review.</p></div></div><Link href="/contribute" className="mt-4 inline-flex items-center gap-2 text-sm font-black text-teal">Add fresh evidence <ArrowUpRight className="h-4 w-4" /></Link></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><RefreshCw className="h-4 w-4 text-amber" /><h3 className="font-extrabold text-navy">Freshness signal</h3></div><p className="mt-3 text-sm leading-6 text-slate-600">The venue was last observed on <strong>{formatDate(venue.lastObserved)}</strong>. {getFreshnessLabel(venue.lastObserved)}. Conditions can change.</p><button className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-teal"><CircleAlert className="h-4 w-4" />Report outdated information</button></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-soft"><div className="flex items-center gap-2"><Share2 className="h-4 w-4 text-teal" /><h3 className="font-extrabold text-navy">Public profile</h3></div><p className="mt-2 text-sm leading-6 text-slate-500">Share this profile with someone planning the same journey. Registration is never required to inspect it.</p><button className="mt-4 w-full rounded-xl bg-navy px-4 py-3 text-sm font-bold text-white hover:bg-teal">Copy link</button></div></aside></div><div className="mt-16"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><SectionLabel eyebrow="Community evidence">What people observed</SectionLabel><Link href="/contribute" className="inline-flex items-center gap-2 text-sm font-black text-teal">Share a fresh observation <ArrowUpRight className="h-4 w-4" /></Link></div><div className="grid gap-5 lg:grid-cols-2">{venue.contributions.map((contribution) => <ContributionCard key={contribution.id} contribution={contribution} evidence={contribution.evidenceIds[0] ? getEvidence(contribution.evidenceIds[0]) : undefined} />)}{venue.contributions.length === 0 && <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">No contributions yet. Be the first to add an observation.</div>}</div></div><div className="mt-16"><SectionLabel eyebrow="Trust states">Read the labels before you decide.</SectionLabel><TrustLegend /></div></div></Shell>;
 }

@@ -8,15 +8,17 @@ datasource db {
 }
 
 model UserProfile {
-  id        String   @id @default(cuid())
-  name      String
-  role      String   @default("Contributor")
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  passwordHash  String?
+  role          String   @default("Contributor")
+  createdAt     DateTime @default(now())
   contributions Contribution[]
-  comments  Comment[]
-  reactions Reaction[]
-  reports   Report[]
-  actions   ModerationAction[]
+  comments      Comment[]
+  reactions     Reaction[]
+  reports       Report[]
+  actions       ModerationAction[]
 }
 
 model Venue {

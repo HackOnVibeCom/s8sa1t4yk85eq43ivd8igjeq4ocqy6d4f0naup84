@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Check, CircleAlert, Clock3, Eye, FileCheck2, Flag, Info, LockKeyhole, MapPin, ShieldCheck, Sparkles, ThumbsUp, Users } from 'lucide-react';
 import { cn, formatDate, getFreshnessLabel, statusTone, valueTone } from '@/lib/utils';
 import type { AccessibilityClaim, EvidenceAsset, Venue } from '@/lib/types';
+import NavAuthStatus from './nav-auth-status';
 
 export function BrandLogo({ compact = false }: { compact?: boolean }) {
   return <Link href="/" className="group inline-flex items-center gap-3" aria-label="CANIGO home">
@@ -25,7 +26,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <Link href="/moderation" className="transition-colors hover:text-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2">Moderation</Link>
         </nav>
         <div className="flex items-center gap-3">
-          <Link href="/profile" className="hidden rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-navy transition hover:border-teal hover:text-teal sm:inline-flex">Sign in</Link>
+          <NavAuthStatus />
           <Link href="/contribute" className="rounded-full bg-navy px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2">Share an observation</Link>
         </div>
       </div>
@@ -45,6 +46,7 @@ export function SectionLabel({ eyebrow, children, dark = false }: { eyebrow: str
 }
 
 export function DemoNotice({ compact = false }: { compact?: boolean }) {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE !== 'true') return null;
   return <div className={cn('flex gap-3 rounded-2xl border border-[#D5E7E4] bg-[#EFF8F6] text-[#175F5B]', compact ? 'px-4 py-3 text-xs' : 'px-5 py-4 text-sm')}>
     <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /><p><strong>Demo data.</strong> These venue records and images are seeded examples for the MVP. They are not verified real-world accessibility information.</p>
   </div>;
@@ -71,7 +73,7 @@ export function EvidenceVisual({ asset, large = false }: { asset?: EvidenceAsset
     {visual === 'restroom' && <div className="absolute left-1/2 top-[47%] h-10 w-16 -translate-x-1/2 rounded-lg border-4 border-white/70 bg-white/20" />}
     {visual === 'parking' && <div className="absolute bottom-[13%] left-[10%] right-[10%] h-7 -skew-x-12 border-y-2 border-white/70" />}
     {visual === 'path' && <div className="absolute bottom-[-4%] left-[34%] h-[65%] w-[32%] rotate-[18deg] rounded-[50%] bg-white/45" />}
-    <div className="absolute left-4 top-4 rounded-full bg-navy/75 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">Demo evidence image</div>
+    <div className="absolute left-4 top-4 rounded-full bg-navy/75 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">Evidence photograph</div>
     {asset && <div className="absolute bottom-3 left-4 right-4 flex items-end justify-between gap-3 text-white"><span className="text-sm font-bold drop-shadow">{asset.title}</span><span className="rounded-full bg-black/30 px-2 py-1 text-[10px] font-bold">{formatDate(asset.observedAt)}</span></div>}
   </div>;
 }

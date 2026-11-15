@@ -22,6 +22,17 @@ export async function readJson<T extends z.ZodTypeAny>(request: Request, schema:
   }
 }
 
+import { getCurrentUser } from './auth';
+
+export async function checkModerator(request: Request) {
+  const user = await getCurrentUser(request);
+  if (user && (user.role === 'Moderator' || user.role === 'Administrator')) {
+    return true;
+  }
+  const role = request.headers.get('x-canigo-role');
+  return role === 'Moderator' || role === 'Administrator';
+}
+
 export function requireModerator(request: Request) {
   const role = request.headers.get('x-canigo-role');
   return role === 'Moderator' || role === 'Administrator';
