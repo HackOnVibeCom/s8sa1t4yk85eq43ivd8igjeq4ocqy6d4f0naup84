@@ -1,0 +1,148 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UserProfile {
+  id            String   @id @default(cuid())
+  name          String
+  email         String?  @unique
+  passwordHash  String?
+  role          String   @default("Contributor")
+  createdAt     DateTime @default(now())
+  contributions Contribution[]
+  comments      Comment[]
+  reactions     Reaction[]
+  reports       Report[]
+  actions       ModerationAction[]
+}
+
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  address     String
+  district    String   @default("")
+  lat         Float    @default(0)
+  lon         Float    @default(0)
+  source      String   @default("community")
+  description String   @default("")
+  tags        String   @default("[]")
+  isDemo      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  claims      AccessClaim[]
+  contributions Contribution[]
+}
+
+model AccessClaim {
+  id                 String   @id @default(cuid())
+  venueId            String
+  attributeKey       String
+  label              String   @default("")
+  group              String   @default("Approach")
+  value              String   @default("Unknown")
+  note               String   @default("")
+  status             String   @default("Reported")
+  observedAt         DateTime @default(now())
+  submittedAt        DateTime @default(now())
+  lastReviewedAt     DateTime?
+  reviewedBy         String?
+  corroborationCount Int      @default(0)
+  challengeCount     Int      @default(0)
+  ownerProvided      Boolean  @default(false)
+  evidenceIds        String   @default("[]")
+  venue              Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  contributions     Contribution[]
+  events             VerificationEvent[]
+  @@unique([venueId, attributeKey])
+  @@index([venueId])
+}
+
+model Contribution {
+  id               String   @id @default(cuid())
+  venueId          String
+  claimId          String?
+  contributorId    String?
+  attributeLabel   String   @default("")
+  note             String
+  observedAt       DateTime @default(now())
+  submittedAt      DateTime @default(now())
+  status           String   @default("Reported")
+  moderationStatus String   @default("queued")
+  publicConsent    Boolean  @default(false)
+  aiConsent        Boolean  @default(false)
+  isDemo           Boolean  @default(false)
+  venue            Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  claim            AccessClaim? @relation(fields: [claimId], references: [id], onDelete: SetNull)
+  contributor      UserProfile? @relation(fields: [contributorId], references: [id], onDelete: SetNull)
+  reactions        Reaction[]
+  comments         Comment[]
+  reports          Report[]
+  actions          ModerationAction[]
+  @@index([venueId])
+  @@index([moderationStatus])
+}
+
+model Reaction {
+  id             String @id @default(cuid())
+  contributionId String
+  userId         String
+  type           String
+  note           String?
+  createdAt      DateTime @default(now())
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  user           UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([contributionId, userId])
+}
+
+model Comment {
+  id             String @id @default(cuid())
+  contributionId String
+  authorId       String?
+  parentId       String?
+  body           String
+  moderationStatus String @default("visible")
+  createdAt      DateTime @default(now())
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  author         UserProfile? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+}
+
+model Report {
+  id             String @id @default(cuid())
+  contributionId String
+  reporterId     String?
+  reason         String
+  explanation    String?
+  status         String @default("queued")
+  createdAt      DateTime @default(now())
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  reporter       UserProfile? @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+}
+
+model VerificationEvent {
+  id          String @id @default(cuid())
+  claimId     String
+  previous    String?
+  next        String
+  reasonCode  String
+  explanation String
+  actorId     String?
+  createdAt   DateTime @default(now())
+  claim       AccessClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+}
+
+model ModerationAction {
+  id             String @id @default(cuid())
+  contributionId String?
+  moderatorId    String
+  action         String
+  reasonCode     String
+  explanation    String
+  createdAt      DateTime @default(now())
+  contribution   Contribution? @relation(fields: [contributionId], references: [id], onDelete: SetNull)
+  moderator      UserProfile @relation(fields: [moderatorId], references: [id], onDelete: Restrict)
+}

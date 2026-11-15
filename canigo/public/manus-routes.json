@@ -1,0 +1,11 @@
+{
+  "routes": [
+    { "path": "/", "title": "CANIGO — Know Before You Go" },
+    { "path": "/discover", "title": "Discover accessible places" },
+    { "path": "/venues/:id", "title": "Venue accessibility profile" },
+    { "path": "/contribute", "title": "Contribute evidence" },
+    { "path": "/review/:id", "title": "Review AI observation" },
+    { "path": "/moderation", "title": "Moderation workspace" },
+    { "path": "/profile", "title": "Your profile" }
+  ]
+}
