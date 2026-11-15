@@ -25,8 +25,7 @@ export const GlobalNavbar: React.FC = () => {
     notifications,
     markNotificationAsRead,
     authRole,
-    signOutDemo,
-    isSupabaseConfigured,
+    signOut,
   } = useApp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -231,11 +230,11 @@ export const GlobalNavbar: React.FC = () => {
               {isProfileOpen && (
                 <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-xs sm:w-64 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-3 border-b border-[#E5E5DC]">
-                    <p className="text-sm font-bold text-[#263C3A] leading-tight">{authRole === 'admin' ? (isSupabaseConfigured ? 'CANIGO Admin' : 'CANIGO Demo Admin') : userProfile.name}</p>
+                    <p className="text-sm font-bold text-[#263C3A] leading-tight">{authRole === 'admin' ? 'CANIGO Admin' : userProfile.name}</p>
                     <p className="text-xs text-[#74817B] mt-0.5">{authRole === 'admin' ? 'Administrator workspace' : userProfile.location}</p>
                     <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EDF4EA] text-forest text-[11px] font-semibold">
                       <CheckCircle2 className="w-3 h-3 text-forest" />
-                      {authRole === 'admin' ? (isSupabaseConfigured ? 'Administrator' : 'Demo Administrator') : userProfile.badge}
+                      {authRole === 'admin' ? 'Administrator' : userProfile.badge}
                     </div>
                   </div>
 
@@ -287,7 +286,7 @@ export const GlobalNavbar: React.FC = () => {
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
-                        signOutDemo();
+                        signOut();
                       }}
                       className="w-full text-left px-4 py-2 text-xs font-medium text-terracotta hover:bg-[#FCEBE7]/50 flex items-center gap-2.5"
                     >
@@ -301,7 +300,7 @@ export const GlobalNavbar: React.FC = () => {
               onClick={() => navigateTo('/signin')}
               className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-forest-hover"
             >
-              {isSupabaseConfigured ? 'Sign in' : 'Demo sign in'}
+              Sign in
             </button>}
 
             {/* Mobile Hamburger Toggle */}
@@ -351,11 +350,11 @@ export const GlobalNavbar: React.FC = () => {
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
-                authRole ? signOutDemo() : navigateTo('/signin');
+                authRole ? signOut() : navigateTo('/signin');
               }}
               className="block w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold text-forest hover:bg-[#EDF4EA]"
             >
-              {authRole ? 'Sign out' : (isSupabaseConfigured ? 'Sign in' : 'Demo sign in')}
+              {authRole ? 'Sign out' : 'Sign in'}
             </button>
           </div>
         </div>

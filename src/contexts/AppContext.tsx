@@ -57,7 +57,7 @@ interface AppContextType {
   currentRoute: string;
   navigateTo: (route: string) => void;
 
-  // Demo access
+  // Authentication
   authRole: UserRole | null;
   authUserId: string | null;
   authLoading: boolean;
@@ -66,8 +66,7 @@ interface AppContextType {
   isSupabaseConfigured: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (displayName: string, email: string, password: string) => Promise<boolean>;
-  signInDemo: (role: UserRole) => void;
-  signOutDemo: () => void;
+  signOut: () => void;
 
   // Venues
   venues: Venue[];
@@ -151,15 +150,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const path = window.location.pathname;
     return path && path !== '/' ? path : '/';
   });
-  const [authRole, setAuthRole] = useState<UserRole | null>(() => {
-    if (isSupabaseConfigured) return null;
-    const storedRole = localStorage.getItem('canigo_demo_role');
-    return storedRole === 'citizen' || storedRole === 'admin' ? storedRole : 'citizen';
-  });
-  const [authUserId, setAuthUserId] = useState<string | null>(() => {
-    if (isSupabaseConfigured) return null;
-    return 'citizen-1';
-  });
+  const [authRole, setAuthRole] = useState<UserRole | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
   const [authError, setAuthError] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
@@ -193,6 +185,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     if (!supabase) {
+      localStorage.removeItem('canigo_demo_role');
       setAuthLoading(false);
       return;
     }
@@ -227,16 +220,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentRoute(route);
     window.history.pushState({}, '', route);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const signInDemo = (role: UserRole) => {
-    if (isSupabaseConfigured) {
-      setAuthError('Demo sign-in is disabled when Supabase authentication is configured.');
-      return;
-    }
-    localStorage.setItem('canigo_demo_role', role);
-    setAuthRole(role);
-    navigateTo(role === 'admin' ? '/admin' : '/explore');
   };
 
   const signIn = async (email: string, password: string) => {
@@ -274,7 +257,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   };
 
-  const signOutDemo = () => {
+  const signOut = () => {
     const cloudClient = supabase;
     if (cloudClient) {
       void cloudClient.auth.signOut().then(({ error }) => {
@@ -290,8 +273,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
       return;
     }
-    localStorage.removeItem('canigo_demo_role');
     setAuthRole(null);
+    setAuthUserId(null);
     navigateTo('/');
   };
 
@@ -539,7 +522,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Community Posts
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>(() => {
-    if (isSupabaseConfigured) return INITIAL_COMMUNITY_POSTS;
+    if (isSupabaseConfigured) return [];
     const saved = localStorage.getItem('canigo_posts');
     return saved ? JSON.parse(saved) : INITIAL_COMMUNITY_POSTS;
   });
@@ -922,6 +905,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }));
           await seedSharedRecords('community_posts', samplePosts);
           if (active) setCommunityPosts(samplePosts);
+        } else {
+          if (active) setCommunityPosts([]);
         }
 
         if (authUserId) {
@@ -1043,8 +1028,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isSupabaseConfigured,
         signIn,
         signUp,
-        signInDemo,
-        signOutDemo,
+        signOut,
         venues,
         selectedVenue,
         selectVenue,

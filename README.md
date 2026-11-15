@@ -1,31 +1,100 @@
 # CANIGO
 
-CANIGO is a React/Vite accessibility discovery experience. The assistant supports typed and spoken messages, can carry out supported in-app actions, and can respond using Gemini.
+**Know before you go. Share what you find.**
+
+CANIGO is a community-oriented prototype for discovering public places and reviewing accessibility information. It combines venue details, community contributions, evidence and a Gemini-powered assistant. The project is designed to make accessibility information easier to find; it does not independently certify venues or replace an in-person accessibility assessment.
+
+> **Prototype status:** The repository contains sample venue data and several partially implemented or locally simulated interactions. Check the [known limitations](./docs/KNOWN_LIMITATIONS.md) before relying on information or presenting a feature as production-ready. No verified production URL or demo account is currently documented.
+
+## What is in the project
+
+- Search and browse venue information, with map and accessibility-oriented filters.
+- View venue attributes and associated sample images.
+- Sign in or create a citizen account through Supabase; the client does not provide hardcoded demo/admin credentials.
+- Submit accessibility contributions with a multi-step form. Persistence and evidence handling depend on Supabase configuration and have limitations described below.
+- Ask the CANIGO assistant questions and request supported in-app actions.
+- Use browser speech recognition and speech synthesis for voice interaction where supported and permitted.
+- Review moderation and community views. Some evidence, feedback and report interactions are prototype-only rather than persisted.
+
+See the [feature status](./docs/FEATURES.md), [known limitations](./docs/KNOWN_LIMITATIONS.md), and [screenshots and assets guide](./docs/assets/README.md) for what has and has not been verified.
+
+## Technology
+
+- React 18, TypeScript, Vite, Tailwind CSS
+- Supabase Auth, Postgres, Row Level Security and Storage
+- Google Gemini API, called by a server-side endpoint
+- React Leaflet and OpenStreetMap tiles
+- Browser Web Speech APIs for speech input/output
+
+The current assistant implementation uses **Gemini**, not AgentRouter or OpenRouter. A key shared in chat is exposed and must be revoked; it was not copied into the repository or environment. AgentRouter is not integrated because its API endpoint and contract have not been verified. See [AI and voice](./docs/AI_AND_VOICE.md).
 
 ## Run locally
 
-1. Copy `.env.example` to `.env`.
-2. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from your Supabase project's API settings. These are public client values; row-level security in the migration protects the data. Do not put a service-role key in the frontend.
-3. Set `GEMINI_API_KEY` in `.env` to a Gemini API key. This key is read by the local Vite server and is not included in the browser bundle.
-4. Apply `supabase/migrations/20261115000000_initial_schema.sql` in the Supabase SQL Editor.
-5. Install dependencies with `npm install`, then start the app with `npm run dev`.
+### Requirements
 
-With Supabase configured, citizen accounts can register with email and password. Newly registered accounts receive the citizen role. To grant your own account admin access, first register and confirm its email, then run this once in the SQL Editor, replacing the email:
+- Node.js 20 or later (the repository's deployment workflow uses Node 20)
+- npm
+- A Supabase project for authentication and cloud persistence
+- A Gemini API key to use the live AI endpoint
 
-```sql
-update public.profiles
-set role = 'admin'
-where id = (select id from auth.users where email = 'you@example.com');
+### Install and configure
+
+```powershell
+git clone https://github.com/HackOnVibeCom/s8sa1t4yk85eq43ivd8igjeq4ocqy6d4f0naup84.git
+Set-Location s8sa1t4yk85eq43ivd8igjeq4ocqy6d4f0naup84
+npm install
+Copy-Item .env.example .env
 ```
 
-The first admin sign-in seeds the sample venues, contributions, community posts, and reports when those collections are empty. If Supabase is not configured, the app continues to use its local demo sign-in and browser storage.
+Set the Supabase URL and public anon key in `.env`, then set `GEMINI_API_KEY` for the server-side assistant endpoint. Do not put secret keys in variables prefixed with `VITE_`, commit `.env`, or paste replacement secrets into chat. Apply the checked-in Supabase migrations to the project before testing features that require database tables or policies.
 
-Community posts are published to the feed with a pending-review label and appear in the admin workspace immediately. Admin approval verifies them; rejection moves the post into an owner/admin-only archive, where the author can still see its rejected status in their profile. Comments and like/dislike reactions are stored separately and live changes are synchronized through Supabase Realtime.
+```powershell
+npm run dev
+```
 
-If `GEMINI_API_KEY` is not configured, known navigation, search, save, and demonstration-route actions still work through the local fallback. Other assistant requests show an explicit configuration error.
+Vite serves the app at `http://localhost:3000/`. Keep `.env` local and restrict access to the Supabase project. For more detail, see [local setup](./docs/LOCAL_SETUP.md), [architecture](./docs/ARCHITECTURE.md), and [security](./SECURITY.md).
 
-## Deploy to Cloudflare Pages
+## Authentication and access
 
-Deploy the Vite app as usual. In the Cloudflare Pages project settings, add `GEMINI_API_KEY` as a server-side secret for the production environment (and preview if needed). The Pages Function at `functions/api/assistant.ts` uses this binding to call Gemini; do not create a `VITE_GEMINI_API_KEY` or expose the secret in client-side variables.
+There are no built-in citizen or administrator credentials. Citizen sign-in and signup require configured Supabase Auth. Administrative access depends on an administrator role assigned in the database; it must not be granted by client-side credentials. See [authentication and data](./docs/AUTH_AND_DATA.md).
 
-After a citizen signs in, the assistant opens automatically, greets them aloud, and asks the browser for microphone access. If permission is granted, it listens continuously until the user stops listening or closes the assistant. Typed messages remain available, and voice replies can be muted. Speech recognition support depends on the browser; typing remains available when voice is unsupported or permission is denied. The route planner currently displays only the app's sample CIT-to-Marina Beach route. It is not live navigation and does not compute routes for other locations.
+## Deployment and submission
+
+The repository includes a Cloudflare Pages GitHub Actions workflow. It requires the `CLOUDFLARE_API_TOKEN` Actions secret and may use a project-name override. A configured workflow is not proof of a successful deployment: the production URL has not been independently verified. Do not submit a guessed domain.
+
+The HackOnVibe project description, customer-journey storyboard, questionnaire answer bank and completion tracker are in [`docs/`](./docs/). They are preparation materials, not proof that the website, video or questionnaire has been submitted.
+
+## Development
+
+```powershell
+npm run build
+git diff --check
+```
+
+The repository currently has no dedicated automated test or lint script. A successful build does not verify Supabase policies, external API credentials, microphone permissions, deployment availability or every user journey. The [contributing guide](./CONTRIBUTING.md) explains the current validation expectations.
+
+## Team
+
+The following team information was supplied by the team. No individual responsibilities are inferred beyond the supplied team-lead designation.
+
+| GitHub username | Team member | Supplied designation |
+|---|---|---|
+| `KanishJebaMathewM` | Kanish Jeba Mathew M | Team Lead |
+| `tharunrajcse` | Tharun Raj S | Not specified |
+| `MadheshLoganathan123` | L. Madhesh | Not specified |
+
+## Project documentation
+
+- [Problem and impact](./docs/PROBLEM_AND_IMPACT.md)
+- [Features and implementation status](./docs/FEATURES.md)
+- [Primary user journeys](./docs/USER_JOURNEYS.md)
+- [Architecture](./docs/ARCHITECTURE.md)
+- [Technology choices](./docs/TECH_STACK.md)
+- [Data model and persistence](./docs/DATA_MODEL.md)
+- [AI and voice](./docs/AI_AND_VOICE.md)
+- [Accessibility approach](./docs/ACCESSIBILITY.md)
+- [Local setup](./docs/LOCAL_SETUP.md)
+- [Deployment](./docs/DEPLOYMENT.md)
+- [Known limitations](./docs/KNOWN_LIMITATIONS.md)
+- [Contributing](./CONTRIBUTING.md)
+- [Security](./SECURITY.md)

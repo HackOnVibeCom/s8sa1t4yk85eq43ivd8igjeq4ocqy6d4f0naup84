@@ -483,6 +483,7 @@ export const GlobalCanigoAgent: React.FC = () => {
                 type="button"
                 onClick={isListening ? stopListening : startListening}
                 title={isListening ? 'Stop listening' : 'Speak to CANIGO Assistant'}
+                aria-label={isListening ? 'Stop listening' : 'Speak to CANIGO Assistant'}
                 className={`p-2 rounded-full transition-colors flex-shrink-0 ${
                   isListening
                     ? 'bg-red-500 text-white animate-pulse'
@@ -505,7 +506,7 @@ export const GlobalCanigoAgent: React.FC = () => {
 
             <div className="mt-2 text-center">
               <p className="text-[10px] text-gray-400">
-                Tap the microphone to speak · Review actions before they are applied
+                Speak naturally · Replies appear as text and voice · Browser microphone permission required
               </p>
             </div>
           </div>

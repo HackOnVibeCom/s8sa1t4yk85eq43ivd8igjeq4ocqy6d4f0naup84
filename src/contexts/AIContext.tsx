@@ -207,6 +207,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
   const continuousVoiceRef = useRef(false);
+  const startingListeningRef = useRef(false);
   const processingRequestRef = useRef(false);
   const speakingRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
@@ -216,6 +217,30 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const speechSequenceRef = useRef(0);
   const sendMessageRef = useRef<(text: string) => Promise<void>>(async () => undefined);
   const synthRef = useRef<SpeechSynthesis | null>(typeof window !== 'undefined' ? window.speechSynthesis : null);
+  const isOpenRef = useRef(isOpen);
+  const autoStartForCitizenRef = useRef(false);
+  isOpenRef.current = isOpen;
+
+  const scheduleListeningRestart = () => {
+    if (restartTimerRef.current !== null) {
+      window.clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+    if (!continuousVoiceRef.current || !isOpenRef.current) return;
+
+    restartTimerRef.current = window.setTimeout(() => {
+      restartTimerRef.current = null;
+      if (
+        !continuousVoiceRef.current
+        || !isOpenRef.current
+        || processingRequestRef.current
+        || speakingRef.current
+        || shouldListenRef.current
+        || startingListeningRef.current
+      ) return;
+      void startListening();
+    }, 500);
+  };
 
   const quickActions = (() => {
     if (currentRoute.startsWith('/venues/')) {
@@ -269,7 +294,6 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     speechTranscriptRef.current = '';
     setSpokenTranscript('');
     shouldListenRef.current = false;
-    continuousVoiceRef.current = false;
     setIsListening(false);
     stopRecognition();
     setTranscriptFeedback(`Processing: "${textToSend}"...`);
@@ -277,7 +301,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const speakText = (text: string, pauseRecognition = true) => {
-    if (isVoiceMuted || !synthRef.current || typeof SpeechSynthesisUtterance === 'undefined') return;
+    if (isVoiceMuted) return;
+    if (!synthRef.current || typeof SpeechSynthesisUtterance === 'undefined') {
+      setTranscriptFeedback('Voice playback is not supported in this browser. The reply is available as text.');
+      scheduleListeningRestart();
+      return;
+    }
     speechSequenceRef.current += 1;
     const sequence = speechSequenceRef.current;
     try {
@@ -295,15 +324,21 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       if (sequence !== speechSequenceRef.current) return;
       speakingRef.current = false;
       setIsSpeaking(false);
+      scheduleListeningRestart();
     };
     utterance.onend = finishSpeaking;
-    utterance.onerror = finishSpeaking;
+    utterance.onerror = () => {
+      if (sequence !== speechSequenceRef.current) return;
+      setTranscriptFeedback('Voice playback failed. The reply is available as text.');
+      finishSpeaking();
+    };
     try {
       synthRef.current.speak(utterance);
     } catch (error) {
       console.warn('Failed to speak the assistant response.', error);
       speakingRef.current = false;
       setIsSpeaking(false);
+      scheduleListeningRestart();
     }
   };
 
@@ -316,6 +351,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
     speakingRef.current = false;
     setIsSpeaking(false);
+    scheduleListeningRestart();
   };
 
   const toggleVoiceMute = () => {
@@ -324,6 +360,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   };
 
   const startListening = async () => {
+    if (startingListeningRef.current || shouldListenRef.current) return;
     const speechWindow = window as Window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
@@ -333,6 +370,8 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       setTranscriptFeedback('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
+    startingListeningRef.current = true;
+    continuousVoiceRef.current = true;
 
     if (speakingRef.current) {
       stopSpeaking();
@@ -354,6 +393,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       } catch (err: unknown) {
         console.warn('Microphone permission check failed:', err);
         const mediaError = err as { name?: string; message?: string };
+        startingListeningRef.current = false;
         continuousVoiceRef.current = false;
         setIsListening(false);
         shouldListenRef.current = false;
@@ -368,6 +408,11 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
     }
 
+    if (!continuousVoiceRef.current) {
+      startingListeningRef.current = false;
+      return;
+    }
+
     try {
       if (recognitionRef.current) {
         try {
@@ -378,13 +423,13 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
 
       shouldListenRef.current = true;
-      continuousVoiceRef.current = true;
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
       recognition.onstart = () => {
+        startingListeningRef.current = false;
         setIsListening(true);
         setTranscriptFeedback('Listening... Speak your command or question.');
       };
@@ -423,6 +468,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       recognition.onerror = (event) => {
         console.warn('Speech recognition error', event.error);
+        startingListeningRef.current = false;
         shouldListenRef.current = false;
         setIsListening(false);
 
@@ -446,22 +492,26 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           continuousVoiceRef.current = false;
           setTranscriptFeedback('Speech recognition network issue. Please type your message.');
         } else {
+          continuousVoiceRef.current = false;
           setTranscriptFeedback(`Voice recognition issue (${event.error}). Please type your message below.`);
         }
       };
 
       recognition.onend = () => {
+        startingListeningRef.current = false;
         setIsListening(false);
         shouldListenRef.current = false;
         if (speechTranscriptRef.current.trim() && !speechSubmittedRef.current) {
           submitSpokenSpeech();
         }
+        scheduleListeningRestart();
       };
 
       recognitionRef.current = recognition;
       recognition.start();
     } catch (error) {
       console.warn('Failed to start speech recognition.', error);
+      startingListeningRef.current = false;
       continuousVoiceRef.current = false;
       shouldListenRef.current = false;
       setIsListening(false);
@@ -763,6 +813,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     } finally {
       processingRequestRef.current = false;
       setIsThinking(false);
+      scheduleListeningRestart();
     }
   };
 
@@ -772,7 +823,20 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     if (!authRole) {
       stopListening();
       stopSpeaking();
+      setIsOpen(false);
     }
+  }, [authRole]);
+
+  useEffect(() => {
+    if (authRole !== 'citizen') {
+      if (!authRole) autoStartForCitizenRef.current = false;
+      return;
+    }
+    if (autoStartForCitizenRef.current) return;
+
+    autoStartForCitizenRef.current = true;
+    setIsOpen(true);
+    void startListening();
   }, [authRole]);
 
   const clearConversation = () => {
