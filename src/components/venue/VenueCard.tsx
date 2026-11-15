@@ -35,10 +35,10 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white rounded-2xl border border-[#E5E5DC] p-2 sm:p-2 hover:shadow-cardHover transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-2 relative group"
+      className="bg-white rounded-2xl border border-[#E5E5DC] p-2.5 sm:p-3 hover:shadow-cardHover transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-3 relative group"
     >
       {/* Venue Thumbnail Image */}
-      <div className="sm:w-36 h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
+      <div className="w-full sm:w-36 h-36 sm:h-24 rounded-xl overflow-hidden flex-shrink-0 relative">
         <img
           src={venue.heroImage}
           alt={venue.name}

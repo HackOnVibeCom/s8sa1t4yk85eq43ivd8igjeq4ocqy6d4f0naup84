@@ -34,9 +34,21 @@ export const ExplorePage: React.FC = () => {
   } = useApp();
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(true);
   const [isPlaceTypeOpen, setIsPlaceTypeOpen] = useState(true);
   const [isVerificationOpen, setIsVerificationOpen] = useState(true);
+
+  const activeFiltersCount = [
+    filters.wheelchairAccess,
+    filters.stepFree,
+    filters.lift,
+    filters.accessibleRestroom,
+    filters.wheelchairSeating,
+    filters.verifiedOnly,
+    filters.communityVerified,
+    filters.category && filters.category !== 'All Categories',
+  ].filter(Boolean).length;
 
   const placeTypeOptions = [
     { label: 'Restaurants', value: 'Restaurants', icon: <Utensils className="w-4 h-4" /> },
@@ -114,11 +126,40 @@ export const ExplorePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Filter Toggle Button */}
+      <div className="lg:hidden flex items-center justify-between gap-3">
+        <button
+          onClick={() => setIsMobileFiltersOpen(!isMobileFiltersOpen)}
+          className="flex-1 flex items-center justify-between px-4 py-2.5 bg-white border border-[#E5E5DC] rounded-xl text-sm font-bold text-[#263C3A] shadow-xs active:bg-gray-50 transition-colors"
+          aria-expanded={isMobileFiltersOpen}
+        >
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal className="w-4 h-4 text-forest" />
+            <span>{isMobileFiltersOpen ? 'Hide Filters' : 'Filter Places'}</span>
+            {activeFiltersCount > 0 && (
+              <span className="w-5 h-5 rounded-full bg-forest text-white text-xs flex items-center justify-center font-bold">
+                {activeFiltersCount}
+              </span>
+            )}
+          </div>
+          {isMobileFiltersOpen ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+        </button>
+
+        {activeFiltersCount > 0 && (
+          <button
+            onClick={resetFilters}
+            className="px-3.5 py-2.5 text-xs font-bold text-forest bg-forest/10 hover:bg-forest/20 rounded-xl transition-colors"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
       {/* Main Grid: Filters Sidebar + Results + Map Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_250px] gap-4 items-start">
         
         {/* Left Filters Sidebar */}
-        <div className="bg-white rounded-2xl border border-[#E5E5DC] p-4 sm:p-5 shadow-xs space-y-5">
+        <div className={`bg-white rounded-2xl border border-[#E5E5DC] p-4 sm:p-5 shadow-xs space-y-5 ${isMobileFiltersOpen ? 'block' : 'hidden lg:block'}`}>
           <div className="flex items-center justify-between pb-3 border-b border-[#E5E5DC]">
             <div className="flex items-center gap-2 font-bold text-sm text-[#263C3A]">
               <SlidersHorizontal className="w-4 h-4 text-forest" />
@@ -315,16 +356,40 @@ export const ExplorePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Cards List */}
-          <div className="space-y-4">
-            {filteredVenues.map((venue) => (
-              <VenueCard 
-                key={venue.id} 
-                venue={venue} 
-                onSelect={() => setSelectedMapVenueId(venue.id)} 
-              />
-            ))}
-          </div>
+          {/* Cards List or Map View */}
+          {viewMode === 'map' ? (
+            <div className="space-y-3">
+              <div className="bg-white rounded-2xl border border-[#E5E5DC] p-2 sm:p-3 shadow-xs overflow-hidden">
+                <InteractiveMap
+                  venuesList={filteredVenues}
+                  activeVenueId={selectedMapVenueId}
+                  onSelectVenue={(v) => setSelectedMapVenueId(v.id)}
+                  className="h-[360px] sm:h-[460px] w-full"
+                />
+              </div>
+              {selectedMapVenueId && (
+                <div className="pt-1">
+                  <p className="text-xs font-bold text-[#74817B] uppercase tracking-wider mb-2">Selected Place</p>
+                  {filteredVenues.find(v => v.id === selectedMapVenueId) && (
+                    <VenueCard 
+                      venue={filteredVenues.find(v => v.id === selectedMapVenueId)!} 
+                      onSelect={() => setSelectedMapVenueId(selectedMapVenueId)}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredVenues.map((venue) => (
+                <VenueCard 
+                  key={venue.id} 
+                  venue={venue} 
+                  onSelect={() => setSelectedMapVenueId(venue.id)} 
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Column: Interactive Map Preview */}

@@ -133,10 +133,10 @@ export const AccessibilityMapPage: React.FC = () => {
       </div>
 
       {/* Top Filter Pills Row (PDF Page 12) */}
-      <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
+      <div className="flex items-center gap-2 text-xs font-semibold overflow-x-auto pb-1.5 no-scrollbar sm:flex-wrap">
         <button
           onClick={() => setAccessibilityFilter('all')}
-          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 flex-shrink-0 ${
             accessibilityFilter === 'all'
               ? 'bg-forest text-white shadow-xs'
               : 'bg-white text-[#263C3A] border border-[#E5E5DC] hover:bg-gray-50'
@@ -147,7 +147,7 @@ export const AccessibilityMapPage: React.FC = () => {
 
         <button
           onClick={() => setAccessibilityFilter('fully')}
-          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 flex-shrink-0 ${
             accessibilityFilter === 'fully'
               ? 'bg-forest text-white shadow-xs'
               : 'bg-white text-[#263C3A] border border-[#E5E5DC] hover:bg-gray-50'
@@ -159,7 +159,7 @@ export const AccessibilityMapPage: React.FC = () => {
 
         <button
           onClick={() => setAccessibilityFilter('partially')}
-          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 flex-shrink-0 ${
             accessibilityFilter === 'partially'
               ? 'bg-forest text-white shadow-xs'
               : 'bg-white text-[#263C3A] border border-[#E5E5DC] hover:bg-gray-50'
@@ -171,7 +171,7 @@ export const AccessibilityMapPage: React.FC = () => {
 
         <button
           onClick={() => setAccessibilityFilter('none')}
-          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 ${
+          className={`px-3.5 py-1.5 rounded-full transition-colors flex items-center gap-1.5 flex-shrink-0 ${
             accessibilityFilter === 'none'
               ? 'bg-forest text-white shadow-xs'
               : 'bg-white text-[#263C3A] border border-[#E5E5DC] hover:bg-gray-50'
@@ -181,7 +181,7 @@ export const AccessibilityMapPage: React.FC = () => {
           <span>Not Accessible</span>
         </button>
 
-        <select className="bg-white border border-[#E5E5DC] rounded-full px-3 py-1.5 text-xs font-semibold text-[#263C3A] ml-auto">
+        <select className="bg-white border border-[#E5E5DC] rounded-full px-3 py-1.5 text-xs font-semibold text-[#263C3A] ml-0 sm:ml-auto flex-shrink-0">
           <option>All Categories</option>
           <option>Restaurants</option>
           <option>Hospitals</option>
@@ -190,10 +190,42 @@ export const AccessibilityMapPage: React.FC = () => {
       </div>
 
       {/* Main Full Viewport Map Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch h-[510px]">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-4 items-stretch lg:h-[540px]">
         
+        {/* Center / Full Map Container (Primary on Mobile) */}
+        <div className="order-1 lg:order-2 lg:col-span-6 relative rounded-2xl overflow-hidden border border-[#E5E5DC] h-[52vh] min-h-[340px] sm:min-h-[420px] lg:h-full">
+          <InteractiveMap
+            venuesList={filteredVenues}
+            activeVenueId={selectedMapVenueId}
+            showRoute={showRoutePlan}
+            className="h-full w-full"
+            zoomLevel={14}
+          />
+
+          {/* Bottom Floating Route Planning Pill (PDF Page 12) */}
+          <div 
+            onClick={() => setShowRoutePlan(!showRoutePlan)}
+            className="absolute bottom-4 left-3 right-3 sm:left-4 sm:right-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-[#E5E5DC] shadow-card flex items-center justify-between cursor-pointer hover:bg-white transition-all"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-forest text-white flex items-center justify-center flex-shrink-0">
+                <Navigation className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-[#263C3A] truncate">
+                  Accessible Route Planning
+                </p>
+                <p className="text-[11px] text-[#74817B] truncate">
+                  {showRoutePlan ? 'CIT to Marina Beach route active (18.4 km • ~42 min)' : 'Get step-free and wheelchair-friendly routes.'}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />
+          </div>
+        </div>
+
         {/* Left Nearby Places Sidebar (PDF Page 12) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between shadow-xs overflow-hidden">
+        <div className="order-2 lg:order-1 lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between shadow-xs max-h-[380px] lg:max-h-none overflow-hidden">
           <div className="space-y-3 overflow-y-auto pr-1 flex-1">
             <h2 className="font-bold text-sm text-[#263C3A]">
               Nearby Places ({filteredVenues.length})
@@ -247,40 +279,8 @@ export const AccessibilityMapPage: React.FC = () => {
           </button>
         </div>
 
-        {/* Center / Full Map Container */}
-        <div className="lg:col-span-6 relative rounded-2xl overflow-hidden border border-[#E5E5DC]">
-          <InteractiveMap
-            venuesList={filteredVenues}
-            activeVenueId={selectedMapVenueId}
-            showRoute={showRoutePlan}
-            className="h-full w-full"
-            zoomLevel={14}
-          />
-
-          {/* Bottom Floating Route Planning Pill (PDF Page 12) */}
-          <div 
-            onClick={() => setShowRoutePlan(!showRoutePlan)}
-            className="absolute bottom-4 left-4 right-4 z-20 bg-white/95 backdrop-blur-md rounded-2xl p-3 border border-[#E5E5DC] shadow-card flex items-center justify-between cursor-pointer hover:bg-white transition-all"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-forest text-white flex items-center justify-center">
-                <Navigation className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-[#263C3A]">
-                  Accessible Route Planning
-                </p>
-                <p className="text-[11px] text-[#74817B]">
-                  {showRoutePlan ? 'CIT to Marina Beach route active (18.4 km • ~42 min)' : 'Get step-free and wheelchair-friendly routes.'}
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-400" />
-          </div>
-        </div>
-
         {/* Right Map Layers Panel (PDF Page 12) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between shadow-xs space-y-4">
+        <div className="order-3 lg:order-3 lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between shadow-xs space-y-4">
           <div className="space-y-3">
             <div className="flex items-center gap-2 pb-2 border-b border-[#E5E5DC]">
               <Layers className="w-4 h-4 text-forest" />

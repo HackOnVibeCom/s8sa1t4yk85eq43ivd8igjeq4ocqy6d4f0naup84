@@ -157,7 +157,7 @@ export const GlobalNavbar: React.FC = () => {
 
               {/* Notification Popover Dropdown */}
               {isNotificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-sm sm:w-96 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 pb-2 border-b border-[#E5E5DC] flex items-center justify-between">
                     <span className="font-bold text-sm text-[#263C3A]">Notifications</span>
                     <button 
@@ -229,7 +229,7 @@ export const GlobalNavbar: React.FC = () => {
 
               {/* Profile Dropdown Menu */}
               {isProfileOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] max-w-xs sm:w-64 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-3 border-b border-[#E5E5DC]">
                     <p className="text-sm font-bold text-[#263C3A] leading-tight">{authRole === 'admin' ? (isSupabaseConfigured ? 'CANIGO Admin' : 'CANIGO Demo Admin') : userProfile.name}</p>
                     <p className="text-xs text-[#74817B] mt-0.5">{authRole === 'admin' ? 'Administrator workspace' : userProfile.location}</p>

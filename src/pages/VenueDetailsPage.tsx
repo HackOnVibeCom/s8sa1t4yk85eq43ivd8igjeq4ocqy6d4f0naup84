@@ -76,7 +76,7 @@ export const VenueDetailsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           
           {/* Hero Image with Photo Counter (1/12) */}
-          <div className="lg:col-span-5 relative rounded-xl overflow-hidden h-40 sm:h-44 border border-gray-100 group">
+          <div className="lg:col-span-5 relative rounded-2xl overflow-hidden h-48 sm:h-56 lg:h-64 border border-gray-100 group">
             <img
               src={venue.heroImage}
               alt={venue.name}

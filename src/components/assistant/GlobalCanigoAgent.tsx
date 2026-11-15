@@ -130,15 +130,24 @@ export const GlobalCanigoAgent: React.FC = () => {
 
   return (
     <>
+      {/* Mobile Backdrop when Assistant is Open */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 backdrop-blur-xs z-40 sm:hidden"
+          onClick={closeAgent}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Floating Bot Button (Bottom Right) */}
       {!isOpen && (
         <button
           type="button"
           onClick={openAgent}
           aria-label="Open CANIGO Assistant"
-          className="fixed bottom-6 right-6 z-50 p-3.5 bg-forest text-white rounded-full shadow-[0_12px_35px_rgba(21,94,75,0.35)] hover:bg-forest-hover transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ring-4 ring-white/60 focus:outline-none focus:ring-4 focus:ring-forest"
+          className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 p-3 sm:p-3.5 bg-forest text-white rounded-full shadow-[0_12px_35px_rgba(21,94,75,0.35)] hover:bg-forest-hover transition-all duration-200 transform hover:scale-105 active:scale-95 flex items-center justify-center ring-4 ring-white/60 focus:outline-none focus:ring-4 focus:ring-forest"
         >
-          <CanigoRobotIcon className="w-8 h-8 text-white" size={32} />
+          <CanigoRobotIcon className="w-7 h-7 sm:w-8 sm:h-8 text-white" size={30} />
           <span className="absolute top-1 right-1 w-3.5 h-3.5 bg-[#80A995] border-2 border-white rounded-full animate-pulse" />
         </button>
       )}
@@ -146,14 +155,19 @@ export const GlobalCanigoAgent: React.FC = () => {
       {/* Floating / Expanded AI Assistant Panel */}
       {isOpen && (
         <div 
-          className={`fixed z-50 transition-all duration-300 ease-out flex flex-col bg-white border border-[#E5E5DC] shadow-2xl rounded-2xl md:rounded-3xl overflow-hidden ${
+          className={`fixed z-50 transition-all duration-300 ease-out flex flex-col bg-white border border-[#E5E5DC] shadow-2xl overflow-hidden ${
             isExpanded
-              ? 'inset-3 md:inset-8 lg:inset-12 max-w-6xl mx-auto'
-              : 'bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-32px)] sm:w-[420px] h-[620px] max-h-[85vh]'
+              ? 'inset-2 sm:inset-6 md:inset-8 lg:inset-12 max-w-6xl mx-auto rounded-2xl md:rounded-3xl'
+              : 'inset-x-0 bottom-0 top-12 sm:top-auto sm:inset-auto sm:bottom-6 sm:right-6 sm:w-[420px] sm:h-[620px] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl'
           }`}
           role="dialog"
           aria-label="CANIGO AI Assistant Window"
         >
+          {/* Mobile Drag Handle Indicator */}
+          <div className="w-full flex justify-center pt-2 sm:hidden bg-[#EDF4EA]">
+            <div className="w-10 h-1 bg-[#80A995]/50 rounded-full" />
+          </div>
+
           {/* Panel Header */}
           <div className="bg-[#EDF4EA] border-b border-[#DDEBE1] px-4 py-3 sm:px-5 sm:py-3.5 flex items-center justify-between flex-shrink-0">
             <div className="flex items-center gap-2.5">

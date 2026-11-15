@@ -130,12 +130,12 @@ export const HomePage: React.FC = () => {
           </div>
 
           {/* Right Column: Hero Photograph with Curved Background */}
-          <div className="lg:absolute lg:right-[-32px] lg:top-[4px] lg:w-[58%] lg:h-[396px] lg:z-0 relative flex justify-center lg:justify-end home-hero-photo">
-            <div className="relative w-full max-w-lg lg:max-w-none lg:h-full overflow-hidden">
+          <div className="lg:absolute lg:right-[-32px] lg:top-[4px] lg:w-[58%] lg:h-[396px] lg:z-0 relative flex justify-center lg:justify-end home-hero-photo mt-4 lg:mt-0">
+            <div className="relative w-full max-w-lg lg:max-w-none lg:h-full rounded-2xl overflow-hidden">
               <img
                 src="/images/home-accessibility.jpg"
                 alt="A wheelchair user approaching a step-free entrance with a ramp"
-                className="w-full h-[360px] sm:h-[440px] lg:h-full object-cover object-right"
+                className="w-full h-[220px] sm:h-[320px] lg:h-full object-cover object-right rounded-2xl"
               />
             </div>
           </div>
@@ -146,7 +146,7 @@ export const HomePage: React.FC = () => {
       {/* Bottom Feature Cards (4 Cards Row) */}
       <section className="bg-transparent py-3 sm:py-3 lg:pt-0 lg:pb-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 bg-white/90 backdrop-blur-xs border border-[#E5E5DC] rounded-3xl shadow-card p-2">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 bg-white/90 backdrop-blur-xs border border-[#E5E5DC] rounded-3xl shadow-card p-3">
             
             {/* Feature 1: Find Places */}
             <div 
