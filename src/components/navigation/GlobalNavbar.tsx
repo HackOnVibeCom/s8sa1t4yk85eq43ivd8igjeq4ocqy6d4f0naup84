@@ -12,7 +12,8 @@ import {
   Menu, 
   X,
   ChevronDown,
-  CheckCircle2
+  CheckCircle2,
+  Plus
 } from 'lucide-react';
 
 export const GlobalNavbar: React.FC = () => {
@@ -22,7 +23,10 @@ export const GlobalNavbar: React.FC = () => {
     unreadNotificationCount, 
     userProfile, 
     notifications,
-    markNotificationAsRead
+    markNotificationAsRead,
+    authRole,
+    signOutDemo,
+    isSupabaseConfigured,
   } = useApp();
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -46,50 +50,63 @@ export const GlobalNavbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const navLinks = [
+  const citizenLinks = [
     { label: 'Explore', path: '/explore' },
-    { label: 'Contribute', path: '/contribute' },
     { label: 'Community', path: '/community' },
     { label: 'About', path: '/about' },
   ];
+  const navLinks = authRole === 'admin'
+    ? [
+      { label: 'Overview', path: '/admin' },
+      { label: 'Reviews', path: '/admin/reviews' },
+      { label: 'Contributors', path: '/admin/contributors' },
+      { label: 'Places', path: '/admin/places' },
+      { label: 'Posts', path: '/admin/community' },
+      { label: 'Reports', path: '/admin/reports' },
+    ]
+    : authRole === 'citizen'
+      ? citizenLinks
+      : [{ label: 'Explore', path: '/explore' }, { label: 'About', path: '/about' }];
 
   const isLinkActive = (path: string) => {
+    if (path.startsWith('/admin/')) return currentRoute === path;
     if (path === '/explore') {
-      return currentRoute === '/explore' || currentRoute.startsWith('/venues/') || currentRoute === '/map';
+      return currentRoute === '/' || currentRoute === '/explore' || currentRoute.startsWith('/venues/') || currentRoute === '/map';
     }
     return currentRoute === path;
   };
 
   return (
     <header className="sticky top-0 z-40 bg-[#F7F6F0]/95 backdrop-blur-md border-b border-[#E5E5DC] transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 sm:h-20">
+      <div className={`max-w-7xl mx-auto ${authRole === 'admin' ? 'px-3 sm:px-4 lg:px-6' : 'px-4 sm:px-6 lg:px-16'}`}>
+        <div className="flex items-center justify-between h-12 sm:h-16">
           
           {/* Left: CANIGO Logo */}
           <div className="flex items-center">
             <button
-              onClick={() => navigateTo('/')}
-              className="flex items-center gap-2.5 group focus:outline-none focus-visible:ring-2 focus-visible:ring-forest rounded-lg"
-              aria-label="CANIGO Home"
+              onClick={() => navigateTo(authRole === 'admin' ? '/admin' : '/')}
+              className="flex items-center gap-2 group focus:outline-none focus-visible:ring-2 focus-visible:ring-forest rounded-lg"
+              aria-label={authRole === 'admin' ? 'CANIGO Admin overview' : 'CANIGO Home'}
             >
               <div className="text-forest group-hover:scale-105 transition-transform">
-                <WheelchairIcon className="w-7 h-7 text-forest" size={28} />
+                <WheelchairIcon className="w-6 h-6 text-forest" size={24} />
               </div>
-              <span className="font-extrabold text-2xl tracking-tight text-forest font-sans">
+              <span className="font-extrabold text-xl tracking-tight text-forest font-sans">
                 CANIGO
               </span>
             </button>
           </div>
 
           {/* Center: Main Navigation */}
-          <nav className="hidden md:flex items-center space-x-1 lg:space-x-3">
+          <nav className={`hidden ${authRole === 'admin' ? 'lg:flex items-center space-x-0.5' : 'md:flex items-center space-x-1 lg:space-x-3 lg:translate-x-32'}`}>
             {navLinks.map((link) => {
               const active = isLinkActive(link.path);
               return (
                 <button
                   key={link.path}
                   onClick={() => navigateTo(link.path)}
-                  className={`px-4 py-1.5 rounded-full text-[15px] font-semibold transition-all duration-150 ${
+                  aria-current={active ? 'page' : undefined}
+                  className={`${authRole === 'admin' ? 'px-2.5 py-1.5 text-xs' : 'px-4 py-1.5 text-[14px]'} whitespace-nowrap rounded-full font-semibold transition-all duration-150 ${
                     active
                       ? 'bg-[#DDEBE1] text-[#155E4B] shadow-xs'
                       : 'text-[#263C3A] hover:text-forest hover:bg-black/5'
@@ -101,11 +118,27 @@ export const GlobalNavbar: React.FC = () => {
             })}
           </nav>
 
-          {/* Right: Notification Bell & Profile Avatar */}
+          {/* Right: Notifications and account controls */}
           <div className="flex items-center space-x-3 sm:space-x-4">
+
+            {authRole !== 'admin' && (
+              <button
+                onClick={() => navigateTo(authRole === 'citizen' ? '/contribute' : '/signin')}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-forest focus-visible:ring-offset-2 sm:px-4 ${
+                  currentRoute === '/contribute'
+                    ? 'bg-[#124B3D] text-white'
+                    : 'bg-forest text-white hover:bg-forest-hover'
+                }`}
+                aria-label="Post a place or accessibility update"
+                title="Post a place or accessibility update"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Post</span>
+              </button>
+            )}
             
             {/* Notification Bell */}
-            <div className="relative" ref={notifRef}>
+            {authRole === 'citizen' && <div className="relative" ref={notifRef}>
               <button
                 onClick={() => {
                   setIsNotificationsOpen(!isNotificationsOpen);
@@ -172,38 +205,51 @@ export const GlobalNavbar: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div>}
 
-            {/* User Profile Avatar & Menu */}
-            <div className="relative" ref={profileRef}>
+            {authRole ? <div className="relative" ref={profileRef}>
               <button
                 onClick={() => {
                   setIsProfileOpen(!isProfileOpen);
                   setIsNotificationsOpen(false);
                 }}
                 className="flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-forest rounded-full p-0.5"
-                aria-label="User profile menu"
+                aria-label={`${authRole === 'admin' ? 'Admin' : 'Citizen'} account menu`}
               >
-                <img
-                  src={userProfile.avatar}
-                  alt={userProfile.name}
-                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-white shadow-xs"
-                />
+                {authRole === 'admin' ? (
+                  <span className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#155E4B] text-white flex items-center justify-center text-xs font-bold border-2 border-white shadow-xs">AD</span>
+                ) : (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userProfile.name}
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-white shadow-xs"
+                  />
+                )}
               </button>
 
               {/* Profile Dropdown Menu */}
               {isProfileOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-popover border border-[#E5E5DC] py-2 z-50 animate-in fade-in zoom-in-95 duration-150">
                   <div className="px-4 py-3 border-b border-[#E5E5DC]">
-                    <p className="text-sm font-bold text-[#263C3A] leading-tight">{userProfile.name}</p>
-                    <p className="text-xs text-[#74817B] mt-0.5">{userProfile.location}</p>
+                    <p className="text-sm font-bold text-[#263C3A] leading-tight">{authRole === 'admin' ? (isSupabaseConfigured ? 'CANIGO Admin' : 'CANIGO Demo Admin') : userProfile.name}</p>
+                    <p className="text-xs text-[#74817B] mt-0.5">{authRole === 'admin' ? 'Administrator workspace' : userProfile.location}</p>
                     <div className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#EDF4EA] text-forest text-[11px] font-semibold">
                       <CheckCircle2 className="w-3 h-3 text-forest" />
-                      {userProfile.badge}
+                      {authRole === 'admin' ? (isSupabaseConfigured ? 'Administrator' : 'Demo Administrator') : userProfile.badge}
                     </div>
                   </div>
 
                   <div className="py-1">
+                    {authRole === 'admin' ? <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        navigateTo('/admin');
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs font-semibold text-[#263C3A] hover:bg-[#F7F6F0] flex items-center gap-2.5"
+                    >
+                      <Shield className="w-4 h-4 text-forest" />
+                      Admin Overview
+                    </button> : <>
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
@@ -234,23 +280,14 @@ export const GlobalNavbar: React.FC = () => {
                       <Bookmark className="w-4 h-4 text-[#74817B]" />
                       Saved Places & Lists
                     </button>
-                    <button
-                      onClick={() => {
-                        setIsProfileOpen(false);
-                        navigateTo('/admin');
-                      }}
-                      className="w-full text-left px-4 py-2 text-xs font-semibold text-[#155E4B] hover:bg-[#EDF4EA] flex items-center gap-2.5"
-                    >
-                      <Shield className="w-4 h-4 text-forest" />
-                      Admin Moderation
-                    </button>
+                    </>}
                   </div>
 
                   <div className="border-t border-[#E5E5DC] pt-1">
                     <button
                       onClick={() => {
                         setIsProfileOpen(false);
-                        navigateTo('/');
+                        signOutDemo();
                       }}
                       className="w-full text-left px-4 py-2 text-xs font-medium text-terracotta hover:bg-[#FCEBE7]/50 flex items-center gap-2.5"
                     >
@@ -260,10 +297,15 @@ export const GlobalNavbar: React.FC = () => {
                   </div>
                 </div>
               )}
-            </div>
+            </div> : <button
+              onClick={() => navigateTo('/signin')}
+              className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-forest-hover"
+            >
+              {isSupabaseConfigured ? 'Sign in' : 'Demo sign in'}
+            </button>}
 
             {/* Mobile Hamburger Toggle */}
-            <div className="md:hidden">
+            <div className={authRole === 'admin' ? 'lg:hidden' : 'md:hidden'}>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="p-2 text-[#263C3A] hover:bg-[#DDEBE1]/50 rounded-lg"
@@ -279,7 +321,7 @@ export const GlobalNavbar: React.FC = () => {
 
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-[#E5E5DC] px-4 pt-2 pb-4 space-y-1 shadow-lg">
+        <div className={`${authRole === 'admin' ? 'lg:hidden' : 'md:hidden'} bg-white border-b border-[#E5E5DC] px-4 pt-2 pb-4 space-y-1 shadow-lg`}>
           {navLinks.map((link) => (
             <button
               key={link.path}
@@ -297,7 +339,7 @@ export const GlobalNavbar: React.FC = () => {
             </button>
           ))}
           <div className="pt-2 border-t border-[#E5E5DC]">
-            <button
+            {authRole === 'citizen' && <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
                 navigateTo('/map');
@@ -305,15 +347,15 @@ export const GlobalNavbar: React.FC = () => {
               className="block w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold text-[#263C3A] hover:bg-gray-50"
             >
               Accessibility Map
-            </button>
+            </button>}
             <button
               onClick={() => {
                 setIsMobileMenuOpen(false);
-                navigateTo('/admin');
+                authRole ? signOutDemo() : navigateTo('/signin');
               }}
               className="block w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold text-forest hover:bg-[#EDF4EA]"
             >
-              Admin Dashboard
+              {authRole ? 'Sign out' : (isSupabaseConfigured ? 'Sign in' : 'Demo sign in')}
             </button>
           </div>
         </div>

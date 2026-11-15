@@ -33,7 +33,7 @@ export const PhotoEvidencePage: React.FC = () => {
 
   const photos = [
     {
-      url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=85',
+      url: '/images/garden-cafe.jpg',
       title: 'Entrance / Ramp'
     },
     {

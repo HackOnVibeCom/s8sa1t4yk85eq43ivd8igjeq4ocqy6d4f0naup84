@@ -24,7 +24,7 @@ export const SavedPlacesPage: React.FC = () => {
   const [newListName, setNewListName] = useState('');
 
   // Venues that are saved
-  const savedVenues = venues.filter(v => v.saved);
+  const savedVenues = venues.filter(v => v.saved || savedLists.some(list => list.venueIds.includes(v.id)));
 
   // If a specific list is selected from the sidebar
   const displayVenues = selectedListId 

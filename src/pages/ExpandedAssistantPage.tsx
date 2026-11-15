@@ -24,6 +24,7 @@ export const ExpandedAssistantPage: React.FC = () => {
   const { 
     messages, 
     sendMessage, 
+    isThinking,
     isListening, 
     startListening, 
     stopListening,
@@ -232,6 +233,9 @@ export const ExpandedAssistantPage: React.FC = () => {
                 </div>
               );
             })}
+            {isThinking && (
+              <p className="text-xs text-[#74817B] italic" role="status">CANIGO is understanding your request...</p>
+            )}
           </div>
 
           {/* Bottom Chat Input Form (PDF Page 11) */}
@@ -248,6 +252,7 @@ export const ExpandedAssistantPage: React.FC = () => {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                disabled={isThinking}
                 placeholder="Ask me anything about accessibility, places, routes or how to use CANIGO..."
                 className="flex-1 px-4 py-2.5 text-xs sm:text-sm bg-[#F7F6F0] border border-[#E5E5DC] rounded-xl focus:outline-none focus:ring-2 focus:ring-forest text-[#263C3A]"
               />
@@ -264,7 +269,7 @@ export const ExpandedAssistantPage: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={!inputText.trim()}
+                disabled={!inputText.trim() || isThinking}
                 className="p-2.5 bg-forest text-white rounded-full hover:bg-forest-hover transition-colors disabled:opacity-40"
               >
                 <Send className="w-4 h-4" />

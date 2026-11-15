@@ -76,7 +76,7 @@ export const VenueDetailsPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
           
           {/* Hero Image with Photo Counter (1/12) */}
-          <div className="lg:col-span-5 relative rounded-2xl overflow-hidden h-60 sm:h-72 border border-gray-100 group">
+          <div className="lg:col-span-5 relative rounded-xl overflow-hidden h-40 sm:h-44 border border-gray-100 group">
             <img
               src={venue.heroImage}
               alt={venue.name}
@@ -85,7 +85,7 @@ export const VenueDetailsPage: React.FC = () => {
             {/* Photo Counter Pill */}
             <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-md text-white text-xs font-semibold px-2.5 py-1 rounded-full flex items-center gap-1.5">
               <Camera className="w-3.5 h-3.5" />
-              <span>1/{venue.images.length || 12}</span>
+              <span>1/12</span>
             </div>
             {/* Expand / View Photos */}
             <button
@@ -191,7 +191,7 @@ export const VenueDetailsPage: React.FC = () => {
                 : 'text-[#74817B] hover:text-[#263C3A]'
             }`}
           >
-            Photos ({venue.images.length || 12})
+            Photos (12)
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
@@ -232,7 +232,7 @@ export const VenueDetailsPage: React.FC = () => {
             </div>
 
             {/* 8-Card Attributes Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
               {venue.attributes.map((attr) => (
                 <AccessibilityAttributeCard
                   key={attr.id}

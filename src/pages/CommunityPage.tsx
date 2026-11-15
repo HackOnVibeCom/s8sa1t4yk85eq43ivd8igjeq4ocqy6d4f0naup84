@@ -6,6 +6,7 @@ import {
   Search, 
   ChevronDown, 
   ThumbsUp, 
+  ThumbsDown,
   MessageSquare, 
   Share2, 
   Bookmark, 
@@ -24,10 +25,12 @@ export const CommunityPage: React.FC = () => {
   const { 
     communityPosts, 
     likeCommunityPost, 
+    dislikeCommunityPost,
     addCommentToPost, 
     addCommunityPost, 
     navigateTo, 
-    userProfile 
+    userProfile,
+    venues,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<'All Posts' | 'Reviews' | 'Questions' | 'Updates' | 'Verified Contributions'>('All Posts');
@@ -40,8 +43,10 @@ export const CommunityPage: React.FC = () => {
   // New post modal fields
   const [newPostContent, setNewPostContent] = useState('');
   const [newPostVenue, setNewPostVenue] = useState('The Garden Café');
+  const [postError, setPostError] = useState('');
 
   const filteredPosts = communityPosts.filter(post => {
+    if (post.moderationStatus === 'Rejected') return false;
     if (activeTab !== 'All Posts' && post.category !== activeTab) {
       if (activeTab === 'Reviews' && post.category !== 'Reviews') return false;
     }
@@ -58,20 +63,23 @@ export const CommunityPage: React.FC = () => {
   const handleCreatePost = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostContent.trim()) return;
+    const venue = venues.find((item) => item.name === newPostVenue);
+    if (!venue) {
+      setPostError('Choose an existing place so the admin can review its location.');
+      return;
+    }
     addCommunityPost({
       authorName: userProfile.name,
       authorAvatar: userProfile.avatar,
       authorBadge: 'Top Contributor',
-      venueName: newPostVenue,
-      venueSlug: 'the-garden-cafe',
+      venueName: venue.name,
+      venueSlug: venue.slug,
       content: newPostContent,
-      photos: [
-        'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80'
-      ],
+      photos: [],
       category: 'All Posts'
     });
     setNewPostContent('');
+    setPostError('');
     setIsNewPostModalOpen(false);
   };
 
@@ -203,6 +211,12 @@ export const CommunityPage: React.FC = () => {
                       <span>•</span>
                       <span>{post.date}</span>
                     </div>
+                    {post.moderationStatus === 'Pending' && (
+                      <p className="mt-1 text-[11px] font-semibold text-amber-700">Visible to the community · awaiting admin review</p>
+                    )}
+                    {post.moderationStatus === 'Verified' && (
+                      <p className="mt-1 text-[11px] font-semibold text-forest">Admin verified</p>
+                    )}
                   </div>
                 </div>
 
@@ -240,6 +254,7 @@ export const CommunityPage: React.FC = () => {
                 <div className="flex items-center gap-4">
                   <button
                     onClick={() => likeCommunityPost(post.id)}
+                    aria-pressed={Boolean(post.isLiked)}
                     className={`flex items-center gap-1.5 py-1 px-2 rounded-lg transition-colors ${
                       post.isLiked
                         ? 'text-forest bg-[#EDF4EA]'
@@ -248,6 +263,17 @@ export const CommunityPage: React.FC = () => {
                   >
                     <ThumbsUp className={`w-4 h-4 ${post.isLiked ? 'fill-forest' : ''}`} />
                     <span>Helpful ({post.helpfulCount})</span>
+                  </button>
+
+                  <button
+                    onClick={() => dislikeCommunityPost(post.id)}
+                    aria-pressed={Boolean(post.isDisliked)}
+                    className={`flex items-center gap-1.5 py-1 px-2 rounded-lg transition-colors ${
+                      post.isDisliked ? 'text-terracotta bg-[#FCEBE7]' : 'hover:text-terracotta hover:bg-gray-50'
+                    }`}
+                  >
+                    <ThumbsDown className={`w-4 h-4 ${post.isDisliked ? 'fill-terracotta' : ''}`} />
+                    <span>Not helpful ({post.dislikeCount ?? 0})</span>
                   </button>
 
                   <button
@@ -290,6 +316,7 @@ export const CommunityPage: React.FC = () => {
                       type="text"
                       value={newCommentText}
                       onChange={(e) => setNewCommentText(e.target.value)}
+                      maxLength={1000}
                       placeholder="Write a comment or add context..."
                       className="flex-1 text-xs px-3.5 py-2 bg-[#F7F6F0] border border-[#E5E5DC] rounded-xl focus:outline-none focus:ring-2 focus:ring-forest text-[#263C3A]"
                     />
@@ -422,12 +449,13 @@ export const CommunityPage: React.FC = () => {
             <form onSubmit={handleCreatePost} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-[#263C3A] mb-1">Venue Name</label>
-                <input
-                  type="text"
+                <select
                   value={newPostVenue}
                   onChange={(e) => setNewPostVenue(e.target.value)}
                   className="w-full text-xs sm:text-sm px-3.5 py-2 bg-[#F7F6F0] border border-[#E5E5DC] rounded-xl focus:outline-none focus:ring-2 focus:ring-forest text-[#263C3A]"
-                />
+                >
+                  {venues.map((venue) => <option key={venue.id} value={venue.name}>{venue.name}</option>)}
+                </select>
               </div>
 
               <div>
@@ -436,10 +464,14 @@ export const CommunityPage: React.FC = () => {
                   rows={4}
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
+                  maxLength={1000}
                   placeholder="Describe entrance, ramp condition, door clearance, lift availability, restroom grab bars..."
                   className="w-full text-xs sm:text-sm px-3.5 py-2 bg-[#F7F6F0] border border-[#E5E5DC] rounded-xl focus:outline-none focus:ring-2 focus:ring-forest text-[#263C3A]"
                 />
               </div>
+
+              <p className="text-xs text-[#74817B]">Your post appears in Community immediately with a pending-review label. An admin can verify or reject it after checking the place.</p>
+              {postError && <p role="alert" className="text-xs text-red-700">{postError}</p>}
 
               <div className="flex justify-end gap-2 pt-2 border-t border-[#E5E5DC]">
                 <button

@@ -115,10 +115,10 @@ export const ExplorePage: React.FC = () => {
       </div>
 
       {/* Main Grid: Filters Sidebar + Results + Map Preview */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_250px] gap-4 items-start">
         
         {/* Left Filters Sidebar */}
-        <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 sm:p-5 shadow-xs space-y-5">
+        <div className="bg-white rounded-2xl border border-[#E5E5DC] p-4 sm:p-5 shadow-xs space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-[#E5E5DC]">
             <div className="flex items-center gap-2 font-bold text-sm text-[#263C3A]">
               <SlidersHorizontal className="w-4 h-4 text-forest" />
@@ -268,7 +268,7 @@ export const ExplorePage: React.FC = () => {
         </div>
 
         {/* Middle Column: Results List */}
-        <div className={`space-y-4 ${viewMode === 'list' ? 'lg:col-span-5' : 'lg:col-span-4'}`}>
+        <div className="space-y-3">
           {/* List Header: Count, Toggle, Sort */}
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-[#263C3A]">
@@ -328,12 +328,13 @@ export const ExplorePage: React.FC = () => {
         </div>
 
         {/* Right Column: Interactive Map Preview */}
-        <div className={`hidden lg:block sticky top-24 ${viewMode === 'list' ? 'lg:col-span-4' : 'lg:col-span-5'}`}>
+        <div className="hidden lg:block sticky top-16">
           <div className="bg-white rounded-2xl border border-[#E5E5DC] p-3 shadow-xs space-y-2">
             <InteractiveMap
               venuesList={filteredVenues}
               activeVenueId={selectedMapVenueId}
-              className="h-[520px] w-full"
+              onMapClick={() => navigateTo('/map')}
+              className="h-[408px] w-full cursor-pointer"
             />
             {/* Floating Info card at bottom of preview */}
             <div className="flex items-center justify-between p-2.5 bg-[#F7F6F0] rounded-xl border border-[#E5E5DC]">
@@ -344,12 +345,7 @@ export const ExplorePage: React.FC = () => {
                   <p className="text-[11px] text-[#74817B]">{filteredVenues.length} accessible places</p>
                 </div>
               </div>
-              <button 
-                onClick={() => navigateTo('/map')}
-                className="text-xs font-bold text-forest hover:underline"
-              >
-                Expand Map →
-              </button>
+              <span className="text-[11px] font-semibold text-forest">Select map to open</span>
             </div>
           </div>
         </div>

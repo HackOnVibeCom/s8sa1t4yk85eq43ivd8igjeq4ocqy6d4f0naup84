@@ -22,8 +22,10 @@ import {
 export const ProfilePage: React.FC = () => {
   const { 
     userProfile, 
+    authUserId,
     updateUserProfile, 
     contributions, 
+    communityPosts,
     navigateTo, 
     savedLists,
     venues 
@@ -32,6 +34,12 @@ export const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'contributions' | 'reviews' | 'saved' | 'activity'>('contributions');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [tempBio, setTempBio] = useState(userProfile.bio);
+  const myContributions = authUserId
+    ? contributions.filter((item) => item.contributorId === authUserId)
+    : contributions;
+  const myCommunityPosts = authUserId
+    ? communityPosts.filter((post) => post.authorId === authUserId)
+    : communityPosts.filter((post) => post.authorName === userProfile.name);
 
   const handleSaveBio = () => {
     updateUserProfile({ bio: tempBio });
@@ -224,7 +232,7 @@ export const ProfilePage: React.FC = () => {
 
         {/* Contributions Cards List */}
         <div className="space-y-3.5">
-          {contributions.map((item) => (
+          {myContributions.map((item) => (
             <div
               key={item.id}
               className="bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:shadow-subtle transition-shadow"
@@ -290,6 +298,36 @@ export const ProfilePage: React.FC = () => {
         </div>
 
       </div>
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-xl font-bold text-[#263C3A]">My community posts</h2>
+          <p className="text-xs sm:text-sm text-[#74817B]">
+            Rejected posts are removed from the public feed but remain visible here.
+          </p>
+        </div>
+        {myCommunityPosts.map((post) => (
+          <article key={post.id} className="rounded-2xl border border-[#E5E5DC] bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-bold text-[#263C3A]">{post.venueName}</h3>
+              <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                post.moderationStatus === 'Rejected'
+                  ? 'bg-[#FCEBE7] text-[#A84732]'
+                  : post.moderationStatus === 'Pending'
+                    ? 'bg-[#FBF1DC] text-[#976B20]'
+                    : 'bg-[#EDF4EA] text-forest'
+              }`}>{post.moderationStatus ?? 'Verified'}</span>
+            </div>
+            <p className="mt-2 text-sm text-[#52635D]">{post.content}</p>
+            {post.moderationStatus === 'Rejected' && (
+              <p className="mt-2 text-xs text-[#A84732]">This post is no longer visible in the community feed.</p>
+            )}
+          </article>
+        ))}
+        {!myCommunityPosts.length && (
+          <p className="rounded-2xl border border-dashed border-[#C3D8CE] bg-white p-4 text-sm text-[#74817B]">You haven’t made any community posts yet.</p>
+        )}
+      </section>
 
     </div>
   );

@@ -1,16 +1,52 @@
-import React, { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import { useApp } from '../../contexts/AppContext';
 import { Venue } from '../../types';
 import { Navigation, Star, CheckCircle, ExternalLink, ShieldCheck } from 'lucide-react';
 
-// Custom Map center updater component
-const MapRecenter: React.FC<{ center: [number, number]; zoom?: number }> = ({ center, zoom }) => {
+const MapViewport: React.FC<{
+  venues: Venue[];
+  activeVenueId?: string | null;
+  zoomLevel: number;
+}> = ({ venues, activeVenueId, zoomLevel }) => {
   const map = useMap();
+  const previousVenueIds = useRef('');
+  const previousActiveVenueId = useRef<string | null | undefined>();
+  const venueIds = venues.map((venue) => venue.id).join('|');
+
   useEffect(() => {
-    map.setView(center, zoom || map.getZoom());
-  }, [center, zoom, map]);
+    map.invalidateSize();
+
+    const positions = venues.map((venue) => [venue.coordinates.lat, venue.coordinates.lng] as [number, number]);
+    if (venueIds !== previousVenueIds.current) {
+      previousVenueIds.current = venueIds;
+      previousActiveVenueId.current = activeVenueId;
+      if (positions.length > 1) {
+        map.fitBounds(L.latLngBounds(positions), { padding: [24, 24], maxZoom: zoomLevel });
+      } else if (positions.length === 1) {
+        map.setView(positions[0], zoomLevel);
+      }
+      return;
+    }
+
+    if (activeVenueId !== previousActiveVenueId.current) {
+      previousActiveVenueId.current = activeVenueId;
+      const activeVenue = venues.find((venue) => venue.id === activeVenueId);
+      if (activeVenue) {
+        map.flyTo([activeVenue.coordinates.lat, activeVenue.coordinates.lng], zoomLevel, { duration: 0.4 });
+      }
+    }
+  }, [activeVenueId, map, venueIds, venues, zoomLevel]);
+
+  return null;
+};
+
+const MapClickHandler: React.FC<{ onMapClick?: () => void }> = ({ onMapClick }) => {
+  useMapEvents({
+    click: () => onMapClick?.(),
+  });
+  return null;
   return null;
 };
 
@@ -75,6 +111,7 @@ interface InteractiveMapProps {
   showRoute?: boolean;
   className?: string;
   zoomLevel?: number;
+  onMapClick?: () => void;
 }
 
 export const InteractiveMap: React.FC<InteractiveMapProps> = ({
@@ -83,34 +120,23 @@ export const InteractiveMap: React.FC<InteractiveMapProps> = ({
   onSelectVenue,
   showRoute = false,
   className = "h-[500px] w-full",
-  zoomLevel = 13
+  zoomLevel = 13,
+  onMapClick,
 }) => {
   const { venues, selectVenue, navigateTo, activeRoutePlan } = useApp();
   const list = venuesList || venues;
 
-  // Center of Chennai around Egmore / Nungambakkam
-  const defaultCenter: [number, number] = [13.0600, 80.2500];
-  const [center, setCenter] = useState<[number, number]>(defaultCenter);
-
-  // Recenter when activeVenueId changes
-  useEffect(() => {
-    if (activeVenueId) {
-      const match = list.find(v => v.id === activeVenueId);
-      if (match) {
-        setCenter([match.coordinates.lat, match.coordinates.lng]);
-      }
-    }
-  }, [activeVenueId, list]);
-
   return (
     <div className={`relative rounded-2xl overflow-hidden border border-[#E5E5DC] shadow-xs ${className}`}>
       <MapContainer
-        center={center}
+        center={[13.0600, 80.2500]}
         zoom={zoomLevel}
+        zoomControl={false}
         scrollWheelZoom={true}
         className="h-full w-full"
       >
-        <MapRecenter center={center} />
+        <MapViewport venues={list} activeVenueId={activeVenueId} zoomLevel={zoomLevel} />
+        <MapClickHandler onMapClick={onMapClick} />
 
         {/* Pure OpenStreetMap standard tiles - 100% free, open, and requires no API key */}
         <TileLayer

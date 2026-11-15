@@ -53,15 +53,15 @@ export const AccessibilityAttributeCard: React.FC<AttributeCardProps> = ({ attri
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between hover:shadow-subtle transition-shadow h-full">
+    <div className="bg-white rounded-xl border border-[#E5E5DC] p-2.5 flex flex-col justify-between hover:shadow-subtle transition-shadow h-full">
       <div>
         {/* Top Header: Icon + Title + Status */}
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#EDF4EA] text-forest flex items-center justify-center flex-shrink-0">
+        <div className="flex items-center justify-between gap-1.5 mb-1">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#EDF4EA] text-forest flex items-center justify-center flex-shrink-0">
               <AccessibilityIcon type={attribute.type} className="w-4 h-4" />
             </div>
-            <h4 className="font-bold text-sm text-[#263C3A] leading-tight">
+            <h4 className="font-bold text-xs text-[#263C3A] leading-tight">
               {attribute.type}
             </h4>
           </div>
@@ -69,14 +69,14 @@ export const AccessibilityAttributeCard: React.FC<AttributeCardProps> = ({ attri
         </div>
 
         {/* Description */}
-        <p className="text-xs text-[#74817B] leading-relaxed mt-2">
+        <p className="text-[11px] text-[#74817B] leading-snug mt-1">
           {attribute.description}
         </p>
       </div>
 
       {/* Optional Photo Attachment */}
       {attribute.photoUrl ? (
-        <div className="mt-3 pt-2">
+        <div className="mt-2">
           <div 
             onClick={() => {
               if (onPhotoClick) {
@@ -85,7 +85,7 @@ export const AccessibilityAttributeCard: React.FC<AttributeCardProps> = ({ attri
                 navigateTo('/evidence/photo-1');
               }
             }}
-            className="w-full h-24 rounded-xl overflow-hidden cursor-pointer relative group border border-gray-100"
+            className="w-full h-14 rounded-lg overflow-hidden cursor-pointer relative group border border-gray-100"
           >
             <img
               src={attribute.photoUrl}

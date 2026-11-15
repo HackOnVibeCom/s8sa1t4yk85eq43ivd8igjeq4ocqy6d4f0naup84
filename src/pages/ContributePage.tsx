@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const ContributePage: React.FC = () => {
-  const { navigateTo, addContribution } = useApp();
+  const { navigateTo, addContribution, userProfile } = useApp();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -47,7 +47,7 @@ export const ContributePage: React.FC = () => {
   const [uploadedPhotos, setUploadedPhotos] = useState<Array<{ id: string; url: string; category: string }>>([
     {
       id: 'p-1',
-      url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80',
+      url: '/images/garden-cafe.jpg',
       category: 'Entrance'
     },
     {
@@ -73,6 +73,8 @@ export const ContributePage: React.FC = () => {
   });
 
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState('');
 
   // Remove photo handler
   const removePhoto = (id: string) => {
@@ -151,24 +153,32 @@ export const ContributePage: React.FC = () => {
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
-    addContribution({
-      venueId: 'venue-1',
-      venueName: placeName,
-      venueCategory: placeType,
-      venueCity: 'Chennai',
-      contributorName: 'Kanish Mathew M',
-      contributorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
-      note: contributorNote,
-      photos: uploadedPhotos.map(p => ({
-        id: p.id,
-        url: p.url,
-        category: p.category
-      })),
-      claim: 'Step-free entrance and accessible seating confirmed'
-    });
-    setIsSubmitted(true);
+    setIsSubmitting(true);
+    setSubmissionError('');
+    try {
+      await addContribution({
+        venueId: 'venue-1',
+        venueName: placeName,
+        venueCategory: placeType,
+        venueCity: 'Chennai',
+        contributorName: userProfile.name,
+        contributorAvatar: userProfile.avatar,
+        note: contributorNote,
+        photos: uploadedPhotos.map(p => ({
+          id: p.id,
+          url: p.url,
+          category: p.category
+        })),
+        claim: 'Step-free entrance and accessible seating confirmed'
+      });
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : 'Could not submit the contribution. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -179,7 +189,7 @@ export const ContributePage: React.FC = () => {
         type="file"
         ref={fileInputRef}
         onChange={handleDeviceFiles}
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         multiple
         className="hidden"
       />
@@ -463,6 +473,7 @@ export const ContributePage: React.FC = () => {
                 </div>
 
                 {/* Action Footer */}
+                {submissionError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">{submissionError}</p>}
                 <div className="flex items-center justify-between pt-4 border-t border-[#E5E5DC]">
                   <button
                     type="button"
@@ -719,9 +730,10 @@ export const ContributePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="px-6 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-bold rounded-xl flex items-center gap-2 transition-colors shadow-xs"
+                    disabled={isSubmitting}
+                    className="px-6 py-2.5 bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-bold rounded-xl flex items-center gap-2 transition-colors shadow-xs disabled:opacity-60"
                   >
-                    Submit Contribution
+                    {isSubmitting ? 'Uploading & submitting...' : 'Submit Contribution'}
                     <Check className="w-4 h-4" />
                   </button>
                 </div>

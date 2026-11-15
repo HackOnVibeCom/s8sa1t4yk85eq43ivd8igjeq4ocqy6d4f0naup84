@@ -82,6 +82,7 @@ export const LocationPickerMap: React.FC<LocationPickerMapProps> = ({
       <MapContainer
         center={center}
         zoom={15}
+        zoomControl={false}
         scrollWheelZoom={true}
         className="h-full w-full cursor-crosshair"
       >

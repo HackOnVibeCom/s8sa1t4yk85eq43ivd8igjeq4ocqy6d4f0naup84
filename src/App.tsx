@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AppProvider, useApp } from './contexts/AppContext';
 import { AIProvider } from './contexts/AIContext';
 import { GlobalNavbar } from './components/navigation/GlobalNavbar';
@@ -11,7 +11,7 @@ import { VenueDetailsPage } from './pages/VenueDetailsPage';
 import { ContributePage } from './pages/ContributePage';
 import { CommunityPage } from './pages/CommunityPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AdminWorkspacePage } from './pages/AdminWorkspacePage';
 import { ReportPage } from './pages/ReportPage';
 import { SavedPlacesPage } from './pages/SavedPlacesPage';
 import { NotificationsPage } from './pages/NotificationsPage';
@@ -19,19 +19,48 @@ import { ExpandedAssistantPage } from './pages/ExpandedAssistantPage';
 import { AccessibilityMapPage } from './pages/AccessibilityMapPage';
 import { PhotoEvidencePage } from './pages/PhotoEvidencePage';
 import { AboutPage } from './pages/AboutPage';
+import { SignInPage } from './pages/SignInPage';
 
 // Router content component
 const AppRouter: React.FC = () => {
-  const { currentRoute, navigateTo } = useApp();
+  const { currentRoute, navigateTo, authRole, authLoading, dataError } = useApp();
+  const footerLinks = authRole === 'admin' ? [] : [
+      { label: 'About', route: '/about' },
+      { label: 'Explore', route: '/explore' },
+      { label: 'Map', route: '/map' },
+      { label: 'Community', route: '/community' },
+    ];
+  const isAdminRoute = currentRoute === '/admin' || currentRoute.startsWith('/admin/');
+  const isCitizenRoute = [
+    '/contribute',
+    '/community',
+    '/profile',
+    '/saved',
+    '/notifications',
+    '/assistant',
+    '/map',
+  ].includes(currentRoute) || currentRoute.startsWith('/report/') || currentRoute.startsWith('/evidence/');
+  const accessDenied = !authLoading
+    && ((isAdminRoute && authRole !== 'admin') || (isCitizenRoute && authRole !== 'citizen'));
+
+  useEffect(() => {
+    if (accessDenied) {
+      navigateTo('/signin');
+    }
+  }, [accessDenied, currentRoute, authLoading]);
 
   const renderCurrentPage = () => {
+    if (authLoading && (isAdminRoute || isCitizenRoute)) {
+      return <div className="flex min-h-[50vh] items-center justify-center text-sm text-[#74817B]" role="status">Checking your sign-in...</div>;
+    }
+    if (accessDenied || currentRoute === '/signin') return <SignInPage />;
     if (currentRoute === '/') return <HomePage />;
     if (currentRoute === '/explore') return <ExplorePage />;
     if (currentRoute.startsWith('/venues/')) return <VenueDetailsPage />;
     if (currentRoute === '/contribute') return <ContributePage />;
     if (currentRoute === '/community') return <CommunityPage />;
     if (currentRoute === '/profile') return <ProfilePage />;
-    if (currentRoute === '/admin') return <AdminDashboardPage />;
+    if (isAdminRoute) return <AdminWorkspacePage />;
     if (currentRoute.startsWith('/report/')) return <ReportPage />;
     if (currentRoute === '/saved') return <SavedPlacesPage />;
     if (currentRoute === '/notifications') return <NotificationsPage />;
@@ -49,8 +78,16 @@ const AppRouter: React.FC = () => {
       {/* Universal Top Navigation Bar */}
       <GlobalNavbar />
 
+      {dataError && (
+        <div className="mx-auto mt-3 w-full max-w-7xl px-4" role="alert">
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            Supabase data error: {dataError}
+          </div>
+        </div>
+      )}
+
       {/* Main Page Content */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-8">
         {renderCurrentPage()}
       </main>
 
@@ -63,18 +100,18 @@ const AppRouter: React.FC = () => {
             <span>Accessible Places for Everyone. Built with community love in Chennai.</span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <button onClick={() => navigateTo('/about')} className="hover:text-forest">About</button>
-            <button onClick={() => navigateTo('/explore')} className="hover:text-forest">Explore</button>
-            <button onClick={() => navigateTo('/map')} className="hover:text-forest">Map</button>
-            <button onClick={() => navigateTo('/community')} className="hover:text-forest">Community</button>
-            <button onClick={() => navigateTo('/admin')} className="hover:text-forest">Moderation</button>
-          </div>
+          {footerLinks.length > 0 && <div className="flex items-center gap-4 text-xs font-semibold">
+            {footerLinks.map((link) => (
+              <button key={link.route} onClick={() => navigateTo(link.route)} className="hover:text-forest">
+                {link.label}
+              </button>
+            ))}
+          </div>}
         </div>
       </footer>
 
       {/* Persistent Global Floating CANIGO AI Agent */}
-      <GlobalCanigoAgent />
+      {authRole !== 'admin' && <GlobalCanigoAgent />}
     </div>
   );
 };

@@ -35,10 +35,10 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
   return (
     <div
       onClick={handleCardClick}
-      className="bg-white rounded-2xl border border-[#E5E5DC] p-3.5 sm:p-4 hover:shadow-cardHover transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-4 relative group"
+      className="bg-white rounded-2xl border border-[#E5E5DC] p-2 sm:p-2 hover:shadow-cardHover transition-all duration-200 cursor-pointer flex flex-col sm:flex-row gap-2 relative group"
     >
       {/* Venue Thumbnail Image */}
-      <div className="sm:w-44 h-36 sm:h-auto rounded-xl overflow-hidden flex-shrink-0 relative">
+      <div className="sm:w-36 h-20 rounded-lg overflow-hidden flex-shrink-0 relative">
         <img
           src={venue.heroImage}
           alt={venue.name}
@@ -61,7 +61,7 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
           <div className="flex items-start justify-between gap-2">
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="text-base sm:text-lg font-bold text-[#263C3A] hover:text-forest transition-colors truncate">
+                <h3 className="text-sm sm:text-base font-bold text-[#263C3A] hover:text-forest transition-colors truncate">
                   {venue.name}
                 </h3>
                 {venue.verificationStatus === 'Verified' && (
@@ -97,15 +97,15 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
           </div>
 
           {/* Description */}
-          <p className="text-xs sm:text-sm text-[#74817B] mt-2 line-clamp-2">
+          <p className="text-xs text-[#74817B] mt-1 line-clamp-1">
             {venue.description}
           </p>
         </div>
 
         {/* Feature Tags with Verification / Confirmation Status */}
-        <div className="flex flex-wrap items-center gap-2 mt-3 pt-2.5 border-t border-gray-100">
+        <div className="flex flex-wrap items-center gap-1 mt-2 pt-1.5 border-t border-gray-100">
           {/* Entrance */}
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#EDF4EA] text-forest">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDF4EA] text-forest">
             <AccessibilityIcon type="entrance" className="w-3.5 h-3.5" />
             <span>Entrance</span>
             <CheckCircle className="w-3 h-3 text-forest" />
@@ -113,13 +113,13 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
 
           {/* Restroom */}
           {venue.features.accessibleRestroom ? (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#EDF4EA] text-forest">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDF4EA] text-forest">
               <AccessibilityIcon type="restroom" className="w-3.5 h-3.5" />
               <span>Restroom</span>
               <CheckCircle className="w-3 h-3 text-forest" />
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500">
               <AccessibilityIcon type="restroom" className="w-3.5 h-3.5" />
               <span>Restroom</span>
               <HelpCircle className="w-3 h-3 text-gray-400" />
@@ -129,13 +129,13 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
           {/* Lift */}
           {venue.features.lift !== undefined && (
             venue.features.lift ? (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#EDF4EA] text-forest">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDF4EA] text-forest">
                 <AccessibilityIcon type="lift" className="w-3.5 h-3.5" />
                 <span>Lift</span>
                 <CheckCircle className="w-3 h-3 text-forest" />
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-gray-100 text-gray-500">
                 <AccessibilityIcon type="lift" className="w-3.5 h-3.5" />
                 <span>Lift</span>
                 <HelpCircle className="w-3 h-3 text-gray-400" />
@@ -145,7 +145,7 @@ export const VenueCard: React.FC<VenueCardProps> = ({ venue, onSelect, showMapPi
 
           {/* Parking */}
           {venue.features.parking && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#EDF4EA] text-forest">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#EDF4EA] text-forest">
               <AccessibilityIcon type="parking" className="w-3.5 h-3.5" />
               <span>Parking</span>
               <CheckCircle className="w-3 h-3 text-forest" />

@@ -15,8 +15,6 @@ import {
   AlertTriangle, 
   Ban, 
   LocateFixed, 
-  Plus, 
-  Minus,
   Building2,
   Hospital,
   Train,
@@ -192,7 +190,7 @@ export const AccessibilityMapPage: React.FC = () => {
       </div>
 
       {/* Main Full Viewport Map Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch h-[680px]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch h-[510px]">
         
         {/* Left Nearby Places Sidebar (PDF Page 12) */}
         <div className="lg:col-span-3 bg-white rounded-2xl border border-[#E5E5DC] p-4 flex flex-col justify-between shadow-xs overflow-hidden">

@@ -87,6 +87,7 @@ export interface ContributionPhoto {
 
 export interface Contribution {
   id: string;
+  contributorId?: string;
   venueId: string;
   venueName: string;
   venueCategory: string;
@@ -109,6 +110,7 @@ export interface Contribution {
 
 export interface CommunityPost {
   id: string;
+  authorId?: string;
   authorName: string;
   authorAvatar: string;
   authorBadge?: 'Top Contributor' | 'Community Verified' | 'Volunteer';
@@ -118,6 +120,7 @@ export interface CommunityPost {
   content: string;
   photos: string[];
   helpfulCount: number;
+  dislikeCount?: number;
   commentCount: number;
   comments: {
     id: string;
@@ -129,6 +132,8 @@ export interface CommunityPost {
   }[];
   isSaved?: boolean;
   isLiked?: boolean;
+  isDisliked?: boolean;
+  moderationStatus?: 'Pending' | 'Verified' | 'Rejected';
   category: 'All Posts' | 'Reviews' | 'Questions' | 'Updates' | 'Verified Contributions';
 }
 

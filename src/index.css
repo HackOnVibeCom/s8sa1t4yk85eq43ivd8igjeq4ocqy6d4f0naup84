@@ -9,6 +9,16 @@
   }
 }
 
+@keyframes canigo-orb-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes canigo-float-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Custom scrollbar for CANIGO */
 ::-webkit-scrollbar {
   width: 6px;
@@ -53,6 +63,18 @@
   background: #FFFFFF !important;
 }
 
+.leaflet-control-attribution {
+  font-size: 7px !important;
+  line-height: 1.15 !important;
+  color: #74817B !important;
+  background: rgba(255, 255, 255, 0.72) !important;
+  padding: 1px 3px !important;
+}
+
+.leaflet-control-attribution a {
+  color: #52635D !important;
+}
+
 /* Subtle background curve pattern as in PDF page 1 */
 .hero-curve-bg {
   background: radial-gradient(circle at 100% 40%, rgba(221, 235, 225, 0.6) 0%, rgba(247, 246, 240, 0) 65%);
@@ -60,4 +82,98 @@
 
 .subtle-green-gradient {
   background: linear-gradient(135deg, rgba(221, 235, 225, 0.4) 0%, rgba(247, 246, 240, 0.8) 100%);
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 15px;
+  }
+
+  main > .max-w-7xl {
+    max-width: none;
+    padding: 8px 18px 12px;
+  }
+
+  main > .max-w-7xl > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 8px;
+  }
+
+  main > .max-w-7xl .p-4 {
+    padding: 12px;
+  }
+
+  main > .max-w-7xl .p-5,
+  main > .max-w-7xl .sm\:p-5 {
+    padding: 14px;
+  }
+
+  main > .max-w-7xl .p-6,
+  main > .max-w-7xl .sm\:p-6 {
+    padding: 16px;
+  }
+
+  main > .max-w-7xl .px-4 {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  main > .max-w-7xl .px-5,
+  main > .max-w-7xl .sm\:px-5 {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  main > .max-w-7xl .px-6,
+  main > .max-w-7xl .sm\:px-6 {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  main > .max-w-7xl .py-6,
+  main > .max-w-7xl .sm\:py-6 {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  main > .max-w-7xl .gap-6 {
+    gap: 16px;
+  }
+
+  main > .max-w-7xl .gap-8 {
+    gap: 20px;
+  }
+
+  main > .max-w-7xl .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 16px;
+  }
+
+  main > .max-w-7xl .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 14px;
+  }
+
+  main > .max-w-7xl .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 12px;
+  }
+
+  main > .max-w-7xl .rounded-3xl {
+    border-radius: 18px;
+  }
+
+  main > .max-w-7xl h1.text-3xl {
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  main > .max-w-7xl h1.text-4xl {
+    font-size: 28px;
+    line-height: 1.2;
+  }
+
+  main > .max-w-7xl h2.text-xl {
+    font-size: 18px;
+  }
+
+  .home-hero-photo {
+    clip-path: ellipse(100% 140% at 100% 120%);
+  }
 }

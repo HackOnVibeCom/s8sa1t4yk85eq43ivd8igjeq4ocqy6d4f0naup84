@@ -13,9 +13,9 @@ export const INITIAL_VENUES: Venue[] = [
     rating: 4.6,
     reviewCount: 28,
     description: 'A cozy café with step-free entrance, spacious seating and accessibility-friendly facilities.',
-    heroImage: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1200&q=80',
+    heroImage: '/images/garden-cafe.jpg',
     images: [
-      'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80',
+      '/images/garden-cafe.jpg',
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=800&q=80',
       'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=800&q=80',
@@ -48,14 +48,14 @@ export const INITIAL_VENUES: Venue[] = [
       quietSpace: true,
       tactilePath: false,
     },
-    saved: true,
+    saved: false,
     attributes: [
       {
         id: 'attr-1',
         type: 'Entrance',
         status: 'Confirmed',
         description: 'Step-free entrance with ramp and handrail.',
-        photoUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=400&q=80',
+        photoUrl: '/images/garden-cafe.jpg',
         confirmedBy: 4,
         lastObserved: '2 days ago'
       },
@@ -231,7 +231,7 @@ export const INITIAL_VENUES: Venue[] = [
       parking: true,
       tactilePath: true,
     },
-    saved: true,
+    saved: false,
     attributes: [
       {
         id: 'attr-301',
@@ -511,14 +511,14 @@ export const INITIAL_CONTRIBUTIONS: Contribution[] = [
     venueCategory: 'Restaurant',
     venueCity: 'Chennai',
     contributorName: 'Arun K.',
-    contributorAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
+    contributorAvatar: '/images/profile-avatar.jpg',
     submissionDate: 'Nov 12, 2026 at 10:24 AM',
     note: 'Visited today. The entrance has a wheelchair ramp with handrail. The seating area is spacious and easily accessible.',
     status: 'Pending Verification',
     photos: [
       {
         id: 'photo-1',
-        url: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=800&q=80',
+        url: '/images/garden-cafe.jpg',
         category: 'Entrance',
         detectedFeatures: ['Ramp detected', 'Handrail detected', 'Wide entrance'],
       },
@@ -645,7 +645,7 @@ export const INITIAL_COMMUNITY_POSTS: CommunityPost[] = [
     date: '2 days ago',
     content: 'Visited today. The ramp is available and in good condition. The entrance is wide enough for a wheelchair and the indoor seating is also accessible.',
     photos: [
-      'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=600&q=80',
+      '/images/garden-cafe.jpg',
       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80',
       'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?auto=format&fit=crop&w=600&q=80',
       'https://images.unsplash.com/photo-1590381105924-c72589b9ef3f?auto=format&fit=crop&w=600&q=80',
@@ -742,7 +742,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     description: 'The Garden Café has been verified by 3 community members.',
     timestamp: '2 hours ago',
     read: false,
-    thumbnail: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=200&q=80',
+    thumbnail: '/images/garden-cafe.jpg',
     linkUrl: '/venues/the-garden-cafe'
   },
   {
@@ -751,7 +751,7 @@ export const INITIAL_NOTIFICATIONS: NotificationItem[] = [
     title: 'New comment on your review',
     description: 'Madhesh S commented on your review of City Central Mall.',
     timestamp: '5 hours ago',
-    read: false,
+    read: true,
     linkUrl: '/community'
   },
   {
