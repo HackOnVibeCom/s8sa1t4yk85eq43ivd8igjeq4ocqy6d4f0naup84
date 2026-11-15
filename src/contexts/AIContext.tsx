@@ -55,6 +55,7 @@ interface SpeechRecognitionLike {
   onend: (() => void) | null;
   start: () => void;
   stop: () => void;
+  abort?: () => void;
 }
 
 type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
@@ -73,6 +74,7 @@ interface AIContextType {
   isListening: boolean;
   startListening: () => void;
   stopListening: () => void;
+  spokenTranscript: string;
   isSpeaking: boolean;
   stopSpeaking: () => void;
   isVoiceMuted: boolean;
@@ -107,16 +109,18 @@ const ACTION_TYPES = new Set<ActionType>([
   'open_report',
   'open_admin',
 ]);
-const VENUE_CATEGORIES = new Set([
-  'All Categories',
-  'Restaurants',
-  'Cafes',
-  'Shopping Mall',
-  'Hospitals',
-  'Parks',
-  'Public Place',
-  'Educational',
-]);
+const normalizeCategory = (cat?: string): string | undefined => {
+  if (!cat) return undefined;
+  const lower = cat.toLowerCase();
+  if (lower.includes('cafe') || lower.includes('coffee')) return 'Cafes';
+  if (lower.includes('restaurant') || lower.includes('food') || lower.includes('dine')) return 'Restaurants';
+  if (lower.includes('hospital') || lower.includes('clinic') || lower.includes('medical')) return 'Hospital';
+  if (lower.includes('mall') || lower.includes('shopping')) return 'Shopping Mall';
+  if (lower.includes('park') || lower.includes('beach') || lower.includes('garden')) return 'Parks';
+  if (lower.includes('public')) return 'Public Place';
+  if (lower.includes('education') || lower.includes('library') || lower.includes('college')) return 'Educational';
+  return undefined;
+};
 
 const timestamp = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -130,7 +134,9 @@ const parseAction = (value: unknown): AssistantAction => {
 
   const action: AssistantAction = { type: value.type as ActionType };
   if (typeof value.venueSlug === 'string') action.venueSlug = value.venueSlug.slice(0, 100);
-  if (typeof value.category === 'string' && VENUE_CATEGORIES.has(value.category)) action.category = value.category;
+  if (typeof value.category === 'string') {
+    action.category = normalizeCategory(value.category) ?? value.category;
+  }
   if (typeof value.query === 'string') action.query = value.query.slice(0, 120);
   if (value.view === 'map' || value.view === 'list') action.view = value.view;
   if (typeof value.origin === 'string') action.origin = value.origin.slice(0, 120);
@@ -143,11 +149,12 @@ const parseAction = (value: unknown): AssistantAction => {
 
 const matchesCategory = (venue: Venue, category: string | undefined) => {
   if (!category || category === 'All Categories') return true;
-  if (category === 'Restaurants') return venue.category === 'Restaurant';
-  if (category === 'Cafes') return venue.category === 'Cafes' || venue.category === 'Restaurant';
-  if (category === 'Hospitals') return venue.category === 'Hospital';
-  if (category === 'Parks') return venue.category === 'Parks' || venue.category === 'Public Place';
-  return venue.category === category;
+  const normCat = normalizeCategory(category) ?? category;
+  if (normCat === 'Restaurants') return venue.category === 'Restaurant';
+  if (normCat === 'Cafes') return venue.category === 'Cafes' || venue.category === 'Restaurant';
+  if (normCat === 'Hospital' || normCat === 'Hospitals') return venue.category === 'Hospital';
+  if (normCat === 'Parks') return venue.category === 'Parks' || venue.category === 'Public Place';
+  return venue.category.toLowerCase() === normCat.toLowerCase();
 };
 
 const supportedRoute = (origin: string, destination: string) => {
@@ -196,11 +203,16 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     },
   ]);
   const [pendingAction] = useState<AIContextType['pendingAction']>(null);
+  const [spokenTranscript, setSpokenTranscript] = useState('');
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const shouldListenRef = useRef(false);
+  const continuousVoiceRef = useRef(false);
   const processingRequestRef = useRef(false);
   const speakingRef = useRef(false);
   const restartTimerRef = useRef<number | null>(null);
+  const silenceTimerRef = useRef<number | null>(null);
+  const speechSubmittedRef = useRef(false);
+  const speechTranscriptRef = useRef('');
   const speechSequenceRef = useRef(0);
   const sendMessageRef = useRef<(text: string) => Promise<void>>(async () => undefined);
   const synthRef = useRef<SpeechSynthesis | null>(typeof window !== 'undefined' ? window.speechSynthesis : null);
@@ -229,20 +241,50 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   })();
 
   const stopRecognition = () => {
+    shouldListenRef.current = false;
+    if (restartTimerRef.current !== null) {
+      window.clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = null;
+    }
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     try {
       recognitionRef.current?.stop();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'InvalidStateError') return;
-      console.error('Failed to pause speech recognition.', error);
-      setTranscriptFeedback('Could not pause voice listening. You can turn the microphone off or type your message.');
+      console.warn('Failed to stop speech recognition.', error);
     }
+  };
+
+  const submitSpokenSpeech = (textOverride?: string) => {
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    const textToSend = (textOverride ?? speechTranscriptRef.current).trim();
+    if (!textToSend || speechSubmittedRef.current) return;
+    speechSubmittedRef.current = true;
+    speechTranscriptRef.current = '';
+    setSpokenTranscript('');
+    shouldListenRef.current = false;
+    continuousVoiceRef.current = false;
+    setIsListening(false);
+    stopRecognition();
+    setTranscriptFeedback(`Processing: "${textToSend}"...`);
+    void sendMessageRef.current(textToSend);
   };
 
   const speakText = (text: string, pauseRecognition = true) => {
     if (isVoiceMuted || !synthRef.current || typeof SpeechSynthesisUtterance === 'undefined') return;
     speechSequenceRef.current += 1;
     const sequence = speechSequenceRef.current;
-    synthRef.current.cancel();
+    try {
+      synthRef.current.cancel();
+    } catch {
+      // ignore
+    }
     speakingRef.current = true;
     if (pauseRecognition) stopRecognition();
     const utterance = new SpeechSynthesisUtterance(text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1').replace(/[*_#`]/g, ''));
@@ -253,27 +295,27 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       if (sequence !== speechSequenceRef.current) return;
       speakingRef.current = false;
       setIsSpeaking(false);
-      scheduleListeningRestart();
     };
     utterance.onend = finishSpeaking;
     utterance.onerror = finishSpeaking;
     try {
       synthRef.current.speak(utterance);
     } catch (error) {
-      console.error('Failed to speak the assistant response.', error);
+      console.warn('Failed to speak the assistant response.', error);
       speakingRef.current = false;
       setIsSpeaking(false);
-      setTranscriptFeedback('Voice output is unavailable. You can still read and type to CANIGO.');
-      scheduleListeningRestart();
     }
   };
 
   const stopSpeaking = () => {
     speechSequenceRef.current += 1;
-    synthRef.current?.cancel();
+    try {
+      synthRef.current?.cancel();
+    } catch {
+      // ignore
+    }
     speakingRef.current = false;
     setIsSpeaking(false);
-    scheduleListeningRestart();
   };
 
   const toggleVoiceMute = () => {
@@ -281,99 +323,172 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     setIsVoiceMuted((previous) => !previous);
   };
 
-  const scheduleListeningRestart = () => {
-    if (!shouldListenRef.current || processingRequestRef.current || speakingRef.current || !recognitionRef.current) return;
-    if (restartTimerRef.current !== null) window.clearTimeout(restartTimerRef.current);
-    restartTimerRef.current = window.setTimeout(() => {
-      restartTimerRef.current = null;
-      if (!shouldListenRef.current || processingRequestRef.current || speakingRef.current) return;
-      try {
-        recognitionRef.current?.start();
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'InvalidStateError') return;
-        shouldListenRef.current = false;
-        setIsListening(false);
-        setTranscriptFeedback('Could not restart voice listening. You can try again or type your message.');
-      }
-    }, 350);
-  };
-
-  const startListening = () => {
+  const startListening = async () => {
     const speechWindow = window as Window & {
       SpeechRecognition?: SpeechRecognitionConstructor;
       webkitSpeechRecognition?: SpeechRecognitionConstructor;
     };
     const SpeechRecognition = speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setTranscriptFeedback('Speech recognition is not supported in this browser. Use text input instead.');
+      setTranscriptFeedback('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
 
-    try {
-      shouldListenRef.current = true;
-      if (restartTimerRef.current !== null) {
-        window.clearTimeout(restartTimerRef.current);
-        restartTimerRef.current = null;
+    if (speakingRef.current) {
+      stopSpeaking();
+    }
+
+    speechSubmittedRef.current = false;
+    speechTranscriptRef.current = '';
+    setSpokenTranscript('');
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+
+    // Proactively verify / request microphone permission using getUserMedia
+    if (typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach((track) => track.stop());
+      } catch (err: unknown) {
+        console.warn('Microphone permission check failed:', err);
+        const mediaError = err as { name?: string; message?: string };
+        continuousVoiceRef.current = false;
+        setIsListening(false);
+        shouldListenRef.current = false;
+        if (mediaError.name === 'NotAllowedError' || mediaError.name === 'PermissionDeniedError') {
+          setTranscriptFeedback('Microphone permission blocked. Please click the site icon in your browser address bar and set Microphone to Allow.');
+        } else if (mediaError.name === 'NotFoundError' || mediaError.name === 'DevicesNotFoundError') {
+          setTranscriptFeedback('No microphone detected on your system. Please plug in a microphone or headset, or type your message.');
+        } else {
+          setTranscriptFeedback('Microphone is busy or inaccessible. Please check your Windows sound settings or type your message.');
+        }
+        return;
       }
-      const recognition = recognitionRef.current ?? new SpeechRecognition();
-      recognition.continuous = true;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort?.();
+        } catch {
+          // ignore
+        }
+      }
+
+      shouldListenRef.current = true;
+      continuousVoiceRef.current = true;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
+
       recognition.onstart = () => {
         setIsListening(true);
-        setTranscriptFeedback('Listening continuously. Say a question or type it below.');
+        setTranscriptFeedback('Listening... Speak your command or question.');
       };
+
       recognition.onresult = (event) => {
-        if (speakingRef.current) return;
-        let interimTranscript = '';
-        const finalTranscripts: string[] = [];
-        for (let index = event.resultIndex; index < event.results.length; index += 1) {
-          const result = event.results[index];
-          if (result.isFinal) finalTranscripts.push(result[0].transcript);
-          else interimTranscript += result[0].transcript;
+        let finalPart = '';
+        let interimPart = '';
+        for (let i = 0; i < event.results.length; i += 1) {
+          const res = event.results[i];
+          if (res.isFinal) {
+            finalPart += res[0].transcript + ' ';
+          } else {
+            interimPart += res[0].transcript;
+          }
         }
-        const finalTranscript = finalTranscripts.join(' ').trim();
-        setTranscriptFeedback(interimTranscript || finalTranscript || 'Listening...');
-        if (finalTranscript) void sendMessageRef.current(finalTranscript);
+        const combined = (finalPart + interimPart).trim();
+        if (combined) {
+          speechTranscriptRef.current = combined;
+          setSpokenTranscript(combined);
+          setTranscriptFeedback(combined);
+
+          if (silenceTimerRef.current !== null) {
+            window.clearTimeout(silenceTimerRef.current);
+          }
+          silenceTimerRef.current = window.setTimeout(() => {
+            if (!speechSubmittedRef.current && speechTranscriptRef.current.trim()) {
+              submitSpokenSpeech();
+            }
+          }, 1200);
+        }
+
+        if (finalPart.trim() && !interimPart.trim()) {
+          submitSpokenSpeech(finalPart.trim());
+        }
       };
+
       recognition.onerror = (event) => {
+        console.warn('Speech recognition error', event.error);
+        shouldListenRef.current = false;
+        setIsListening(false);
+
         if (event.error === 'aborted') {
-          setIsListening(false);
           return;
         }
-        console.warn('Speech recognition error', event.error);
-        setIsListening(false);
-        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-          shouldListenRef.current = false;
-          setTranscriptFeedback('Microphone access was not allowed. Enable it in browser settings or type your message.');
+
+        if (event.error === 'audio-capture') {
+          continuousVoiceRef.current = false;
+          setTranscriptFeedback('No microphone input detected. Please verify your microphone is plugged in and enabled in Windows Settings.');
+        } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          continuousVoiceRef.current = false;
+          setTranscriptFeedback('Microphone permission blocked. Please click the site icon in your browser URL bar and allow microphone access.');
+        } else if (event.error === 'no-speech') {
+          if (speechTranscriptRef.current.trim() && !speechSubmittedRef.current) {
+            submitSpokenSpeech();
+            return;
+          }
+          setTranscriptFeedback('No speech detected. Say a command or tap the mic to speak.');
+        } else if (event.error === 'network') {
+          continuousVoiceRef.current = false;
+          setTranscriptFeedback('Speech recognition network issue. Please type your message.');
         } else {
-          setTranscriptFeedback(`Voice recognition issue: ${event.error}. I will retry if possible; typing also works.`);
+          setTranscriptFeedback(`Voice recognition issue (${event.error}). Please type your message below.`);
         }
       };
+
       recognition.onend = () => {
         setIsListening(false);
-        scheduleListeningRestart();
+        shouldListenRef.current = false;
+        if (speechTranscriptRef.current.trim() && !speechSubmittedRef.current) {
+          submitSpokenSpeech();
+        }
       };
+
       recognitionRef.current = recognition;
       recognition.start();
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'InvalidStateError') return;
-      console.error('Failed to start speech recognition.', error);
+      console.warn('Failed to start speech recognition.', error);
+      continuousVoiceRef.current = false;
       shouldListenRef.current = false;
       setIsListening(false);
-      setTranscriptFeedback('Could not start voice listening. Allow microphone access or type your message instead.');
+      setTranscriptFeedback('Could not access microphone. Tap the mic to retry or type your message.');
     }
   };
 
   const stopListening = () => {
+    continuousVoiceRef.current = false;
     shouldListenRef.current = false;
     if (restartTimerRef.current !== null) {
       window.clearTimeout(restartTimerRef.current);
       restartTimerRef.current = null;
     }
+    if (speechTranscriptRef.current.trim() && !speechSubmittedRef.current) {
+      submitSpokenSpeech();
+      return;
+    }
+    if (silenceTimerRef.current !== null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    speechTranscriptRef.current = '';
+    setSpokenTranscript('');
     stopRecognition();
     setIsListening(false);
-    setTranscriptFeedback('Voice listening is off. You can type or turn the microphone back on.');
+    setTranscriptFeedback('');
   };
 
   const getOfflinePlan = (text: string): AssistantPlan | null => {
@@ -394,13 +509,17 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         };
     }
     if (matchedVenue && /(open|show|view|details)/.test(lower)) {
-      return { reply: `Opening ${matchedVenue.name}. The details reflect community-submitted information and may not be independently verified.`, action: { type: 'open_venue', venueSlug: matchedVenue.slug } };
+      return { reply: `Opening ${matchedVenue.name}.`, action: { type: 'open_venue', venueSlug: matchedVenue.slug } };
     }
-    if (/(save|bookmark|favourite)/.test(lower)) return { reply: 'I will save the selected place to your saved places.', action: { type: 'save_place' } };
-    if (/(restroom|toilet|washroom|cafe|caf[eé]|restaurant|wheelchair|step.free|lift|accessible places|find places)/.test(lower)) {
-      const category = /caf[eé]|coffee/.test(lower) ? 'Cafes' : /restaurant|food/.test(lower) ? 'Restaurants' : undefined;
+    if (/(save|bookmark|favourite)/.test(lower)) return { reply: 'Saving this place to your saved places.', action: { type: 'save_place' } };
+    if (/put post|create post|add post|new post|make post|write post/.test(lower)) {
+      return { reply: 'Opening the contribution page so you can post a place or accessibility update.', action: { type: 'open_contribute' } };
+    }
+    if (/community|feed|discussions/.test(lower)) return { reply: 'Opening the community feed.', action: { type: 'open_community' } };
+    if (/(restroom|toilet|washroom|cafe|caf[eé]|coffee|restaurant|food|wheelchair|step.free|lift|accessible places|find places|list places)/.test(lower)) {
+      const category = normalizeCategory(lower);
       return {
-        reply: 'I will filter the available places using those accessibility needs. Check each venue’s verification status before relying on its details.',
+        reply: `Opening Explore and filtering for ${category ?? 'accessible'} places.`,
         action: {
           type: 'find_places',
           category,
@@ -413,7 +532,6 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       };
     }
     if (/saved places|my lists|favourites/.test(lower)) return { reply: 'Opening your saved places.', action: { type: 'open_saved' } };
-    if (/community|posts|discussions/.test(lower)) return { reply: 'Opening the community feed.', action: { type: 'open_community' } };
     if (/notifications|alerts/.test(lower)) return { reply: 'Opening your notifications.', action: { type: 'open_notifications' } };
     if (/explore|browse places/.test(lower)) return { reply: 'Opening accessible places.', action: { type: 'open_explore' } };
     if (/home|start page/.test(lower)) return { reply: 'Opening CANIGO home.', action: { type: 'open_home' } };
@@ -435,9 +553,14 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     switch (action.type) {
       case 'find_places': {
+        const cleanQuery = action.query?.trim();
+        const isGenericCity = Boolean(cleanQuery && /^(chennai|near chennai|in chennai)$/i.test(cleanQuery));
+        const isCategoryRepeat = Boolean(cleanQuery && action.category && cleanQuery.toLowerCase().includes(action.category.toLowerCase().replace(/s$/, '')));
+
         const nextFilters: FilterState = {
           ...filters,
-          ...(action.query ? { searchQuery: action.query } : {}),
+          ...(isGenericCity ? { location: 'Chennai' } : {}),
+          ...(!isGenericCity && !isCategoryRepeat && cleanQuery ? { searchQuery: cleanQuery } : { searchQuery: '' }),
           ...(action.category ? { category: action.category } : {}),
           ...(typeof action.wheelchairAccess === 'boolean' ? { wheelchairAccess: action.wheelchairAccess } : {}),
           ...(typeof action.stepFree === 'boolean' ? { stepFree: action.stepFree } : {}),
@@ -453,12 +576,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
           && (!nextFilters.accessibleRestroom || venue.features.accessibleRestroom)
         );
         setFilters(nextFilters);
-        if (action.view === 'map' && authRole !== 'citizen') {
-          navigateTo('/signin');
-          reply = 'I applied the place filters. Sign in with the citizen demo account to open the accessibility map.';
-        } else {
-          navigateTo(action.view === 'map' ? '/map' : '/explore');
-        }
+        navigateTo(action.view === 'map' ? '/map' : '/explore');
         if (matches[0]) {
           venueCard = matches[0];
           selectVenue(matches[0]);
@@ -514,12 +632,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         break;
       }
       case 'open_map':
-        if (authRole !== 'citizen') {
-          navigateTo('/signin');
-          reply = 'The accessibility map requires the citizen demo sign-in. Taking you to sign-in.';
-        } else {
-          navigateTo('/map');
-        }
+        navigateTo('/map');
         break;
       case 'open_explore':
         navigateTo('/explore');
@@ -537,15 +650,10 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         if (action.type === 'open_admin') {
           if (authRole !== 'admin') {
             navigateTo('/signin');
-            reply = 'The admin workspace requires the admin demo sign-in. Taking you to sign-in.';
+            reply = 'The admin workspace requires administrator access. Opening sign-in page.';
             break;
           }
           navigateTo('/admin');
-          break;
-        }
-        if (authRole !== 'citizen') {
-          navigateTo('/signin');
-          reply = 'Please sign in with the citizen demo account to access that page.';
           break;
         }
         const routes = {
@@ -579,38 +687,49 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       .filter((message) => message.id !== 'msg-init-1')
       .slice(-8)
       .map(({ role, content }) => ({ role, content }));
-    const response = await fetch('/api/assistant', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userText: text,
-        history,
-        currentRoute,
-        selectedVenue: selectedVenue?.name ?? null,
-        venues: venues.map(({ name, slug, category, address, verificationStatus, features }) => ({
-          name,
-          slug,
-          category,
-          address,
-          verificationStatus,
-          features,
-        })),
-      }),
-    });
 
-    const result: unknown = await response.json().catch(() => null);
-    if (response.status === 503) {
+    try {
+      const response = await fetch('/api/assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userText: text,
+          history,
+          currentRoute,
+          selectedVenue: selectedVenue?.name ?? null,
+          venues: venues.map(({ name, slug, category, address, verificationStatus, features }) => ({
+            name,
+            slug,
+            category,
+            address,
+            verificationStatus,
+            features,
+          })),
+        }),
+      });
+
+      const result: unknown = await response.json().catch(() => null);
+      if (response.ok && isRecord(result) && typeof result.reply === 'string' && result.reply.trim()) {
+        const action = parseAction(result.action);
+        if (action.type === 'answer') {
+          const offlinePlan = getOfflinePlan(text);
+          if (offlinePlan && offlinePlan.action.type !== 'answer') {
+            return { reply: result.reply.trim(), action: offlinePlan.action };
+          }
+        }
+        return { reply: result.reply.trim(), action };
+      }
+
       const offlinePlan = getOfflinePlan(text);
       if (offlinePlan) return offlinePlan;
-    }
-    if (!response.ok) {
+
       const detail = isRecord(result) && typeof result.error === 'string' ? result.error : 'The assistant service returned an error.';
       throw new Error(detail);
+    } catch (err) {
+      const offlinePlan = getOfflinePlan(text);
+      if (offlinePlan) return offlinePlan;
+      throw err;
     }
-    if (!isRecord(result) || typeof result.reply !== 'string' || !result.reply.trim()) {
-      throw new Error('The assistant service returned an invalid response. Please try again.');
-    }
-    return { reply: result.reply.trim(), action: parseAction(result.action) };
   };
 
   const sendMessage = async (text: string) => {
@@ -644,24 +763,16 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     } finally {
       processingRequestRef.current = false;
       setIsThinking(false);
-      scheduleListeningRestart();
     }
   };
 
   sendMessageRef.current = sendMessage;
 
   useEffect(() => {
-    if (authRole === 'citizen') {
-      setIsOpen(true);
-      startListening();
-      const greeting = messages.find((message) => message.id === 'msg-init-1');
-      if (greeting) speakText(greeting.content, false);
-      return;
+    if (!authRole) {
+      stopListening();
+      stopSpeaking();
     }
-
-    setIsOpen(false);
-    stopListening();
-    stopSpeaking();
   }, [authRole]);
 
   const clearConversation = () => {
@@ -688,12 +799,12 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
             setIsOpen(false);
           } else {
             setIsOpen(true);
-            if (authRole === 'citizen') startListening();
+            void startListening();
           }
         },
         openAgent: () => {
           setIsOpen(true);
-          if (authRole === 'citizen') startListening();
+          void startListening();
         },
         closeAgent: () => {
           stopListening();
@@ -708,6 +819,7 @@ export const AIProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         isListening,
         startListening,
         stopListening,
+        spokenTranscript,
         isSpeaking,
         stopSpeaking,
         isVoiceMuted,

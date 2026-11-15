@@ -154,9 +154,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [authRole, setAuthRole] = useState<UserRole | null>(() => {
     if (isSupabaseConfigured) return null;
     const storedRole = localStorage.getItem('canigo_demo_role');
-    return storedRole === 'citizen' || storedRole === 'admin' ? storedRole : null;
+    return storedRole === 'citizen' || storedRole === 'admin' ? storedRole : 'citizen';
   });
-  const [authUserId, setAuthUserId] = useState<string | null>(null);
+  const [authUserId, setAuthUserId] = useState<string | null>(() => {
+    if (isSupabaseConfigured) return null;
+    return 'citizen-1';
+  });
   const [authLoading, setAuthLoading] = useState(isSupabaseConfigured);
   const [authError, setAuthError] = useState<string | null>(null);
   const [dataError, setDataError] = useState<string | null>(null);
